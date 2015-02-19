@@ -24,6 +24,8 @@ import base64
 
 samplerate=48000.0
 
+np.seterr(all='ignore')
+
 def float2pcm(sig, dtype='int16'):
     """Convert floating point signal with a range from -1 to 1 to PCM.
 
