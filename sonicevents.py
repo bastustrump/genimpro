@@ -133,7 +133,7 @@ def showAndPlay(events,audio,sequence=[]):
 	
 
 	
-def getFeaturesForOnsets(onsets,filename):	
+def getFeaturesForOnsets(onsets,filename,t_duration=0.02):	
 	loader = essentia.standard.AudioLoader(filename=filename)
 	audio,samplerate,x,x,x,x = loader()
 	mono_audio = np.asarray([audio[i][0] for i in range(0,len(audio)-1)])
@@ -205,7 +205,7 @@ def getFeaturesForOnsets(onsets,filename):
 			loudnessNext = loudness(frameNext)
 			loudnessDiff = abs(loudnessEnd - loudnessNext)
 
-		if (features["Loudness"]["mean"] > 0.001) & (durationAdd > 0.09) & (loudnessDiff>0.03):
+		if (features["Loudness"]["mean"] > 0.001) & (durationAdd > t_duration):# & (loudnessDiff>0.03):
 			
 			sonicevents.append({"start":onsetStart,"end":onsetEnd,"features":features,"audio":eff_frame})
 			onsetStart = onsets[i+1]
