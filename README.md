@@ -18,7 +18,7 @@
 
 Die Beschreibung der Analysemethodik besteht aus mehreren IPython notebooks. [IPython](http://ipython.org/) ist eine interaktive, Browser-basierte Shell der Programmiersprache [Python](http://www.python.org/) mit vielfältigen Möglichkeiten zur Datenvisualisierung.
 
-###Python Libraries:
+#####Python Libraries
 
 Die folgenden Erweiterungen zu Python werden zum Ausführen der Skripte benötigt:
 
