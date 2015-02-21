@@ -14,6 +14,8 @@
   1. Data-Mining
   2. ...
 
+Quellenverzeichnis
+
 ##Voraussetzungen
 
 Die Beschreibung der Analysemethodik besteht aus mehreren IPython notebooks. [IPython](http://ipython.org/) ist eine interaktive, Browser-basierte Shell der Programmiersprache [Python](http://www.python.org/) mit vielfältigen Möglichkeiten zur Datenvisualisierung.
