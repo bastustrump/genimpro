@@ -3,3 +3,14 @@ web/
 *.sublime*
 *.pyc
 *.pyc
+*.sv
+
+test.py
+
+*.pyc
+
+*.pyc
+
+genimpro.pyc
+
+*.pyc

@@ -25,14 +25,16 @@ def getOnsetsForFile(filename):
 	samplerate = s.samplerate
 
 	o = onset(onset_mode, win_s, hop_s, samplerate)
-	o.set_threshold(0.4)
-	
+	#o.set_threshold(0.4)
+	#o.set_silence(-95)
+	#o.set_minioi_ms(20)
+
 	onsets = []
 	total_frames = 0
 	
 	while True:
 	    samples, read = s()
-	    
+	    samples = samples * 6.0 #normalize
 	    if o(samples):
 	        #print "%f" % o.get_last_s()
 	        onsets.append(o.get_last())
@@ -99,7 +101,7 @@ def getOnsetsForTrack(track):
 
 	onsets=[]
 	onsets = getOnsetsForFile(track[2])
-	print "    " + str(len(onsets)) + " onsets found for %s (%s)" % (track[0],track[1])
+	print "    " + str(len(onsets)) + " onsets found"
 	
 	return (onsets)
 	
@@ -146,6 +148,11 @@ def getFeaturesForOnsets(onsets,filename,t_duration=0.02):
 	spec = essentia.standard.Spectrum()
 	centroid = essentia.standard.Centroid()
 	SpectralComplexity = essentia.standard.SpectralComplexity()
+	SpectralRolloff = essentia.standard.RollOff()
+	SpectralFlux = essentia.standard.Flux()
+	Envelope = essentia.standard.Envelope()
+	TCToTotal = essentia.standard.TCToTotal()
+
 	Pitch = essentia.standard.PitchYinFFT()
     
 	sonicevents = []
@@ -171,10 +178,11 @@ def getFeaturesForOnsets(onsets,filename,t_duration=0.02):
 		eff_frame = mono_audio[onsetStart:onsetStart+length_samples]
 		duration_ratio =  eff_duration / duration
 		
-		featurelist = ["Loudness","ZCR","SpectralCentroid","SpectralComplexity"]
+		featurelist = ["Loudness","ZCR","SpectralCentroid","SpectralComplexity","SpectralRolloff","SpectralFlux"]
 		features = {}
 		features["effLength"]=length_samples
 		features["durationRatio"]=duration_ratio
+		features["dynamicBalance"]=TCToTotal(Envelope(frame))
 		
 		for feature in featurelist:
 			features[feature] = {}
@@ -186,6 +194,8 @@ def getFeaturesForOnsets(onsets,filename,t_duration=0.02):
 		    spectrum = spec(w(featureframe))
 		    features["SpectralCentroid"]["raw"].append(centroid(spectrum))
 		    features["SpectralComplexity"]["raw"].append(SpectralComplexity(spectrum))
+		    features["SpectralRolloff"]["raw"].append(SpectralRolloff(spectrum))
+		    features["SpectralFlux"]["raw"].append(SpectralFlux(spectrum))
 		    #features["Pitch"]["raw"].append(Pitch(spectrum))
 
 		for feature in featurelist:

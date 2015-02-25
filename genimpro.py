@@ -18,7 +18,7 @@ def analyseTrack(track):
 	onsets = se.getOnsetsForTrack(track)
 	sonicevents,audio = se.getFeaturesForOnsets(onsets,audiofile)
 	#sequences = grouping.getSequencesForSonicevents(sonicevents)
-	
+	print "    " + str(len(sonicevents)) + " sonicevents found"
 	
 #	for sequence in sequences:
 #		events = getVar(sonicevents,sequence)
