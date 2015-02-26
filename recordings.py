@@ -4,13 +4,16 @@ import numpy as np
 db = lite.connect('genImpro.db')
 c = db.cursor() 
 
-def getRecordingDetails(recordingID):
+def getRecordingDetails(recordingID,printDetails=0):
 	c.execute("select ID,sessionID,key from recordings where ID=%i" % (recordingID))
 	values = c.fetchone()
 	if values==None:
 		raise Exception("No valid ID")
 		
 	(recordingID,sessionID,key) = values
+
+	if printDetails:
+		print "%i (%s):" % (recordingID,key)	
 
 	c.execute("select playerID,audiofile,ID from tracks where recordingID=%i" % (recordingID))
 	values = c.fetchall()
@@ -23,9 +26,15 @@ def getRecordingDetails(recordingID):
 		track = c.fetchone()
 		tracks.append([track[0],track[1],audiofile,trackID,recordingID])
 
+		if printDetails:
+			print "    %s (%s): %s" % (track[0],track[1],audiofile)
+
 	c.execute("select date,key from sessions where ID="+str(sessionID))
 	session = c.fetchone()
 	values = [recordingID,session[1],session[0],sessionID,tracks]
+
+
+
 	return values
 
 def getAudioForTrack(track):

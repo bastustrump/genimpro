@@ -17,30 +17,30 @@ win_s = 512/2             # fft size
 hop_s = win_s/2           # hop size
 onset_mode = "hfc" 			#complex
 
-def getOnsetsForFile(filename):
+def getOnsetsForFile(filename,printDetails=0,t_silence=-95,min_ms=20):
 
-	global samplerate
-	samplerate = 0
-	s = source(filename, samplerate, hop_s)
-	samplerate = s.samplerate
+    s = source(filename)
+    o = onset(onset_mode,win_s, hop_s)
+    o.set_silence(t_silence)
+    o.set_minioi_ms(min_ms)
+    
+    multiplier = 512/hop_s
+    
+    onsets = []
+    total_frames = 0
+    
+    while True:
+        samples, read = s()
+        #samples = samples * 10.0 #increase loudness for onset detection
+        if o(samples):
+            onsets.append(o.get_last()*multiplier)
+        total_frames += read
+        if read < hop_s: break
 
-	o = onset(onset_mode, win_s, hop_s, samplerate)
-	#o.set_threshold(0.4)
-	#o.set_silence(-95)
-	#o.set_minioi_ms(20)
+    if printDetails:
+        print "    " + str(len(onsets)) + " onsets found"
 
-	onsets = []
-	total_frames = 0
-	
-	while True:
-	    samples, read = s()
-	    samples = samples * 6.0 #normalize
-	    if o(samples):
-	        #print "%f" % o.get_last_s()
-	        onsets.append(o.get_last())
-	    total_frames += read
-	    if read < hop_s: break
-	return onsets
+    return onsets
 
 
 
@@ -135,7 +135,7 @@ def showAndPlay(events,audio,sequence=[]):
 	
 
 	
-def getFeaturesForOnsets(onsets,filename,t_duration=0.02):	
+def getFeaturesForOnsets(onsets,filename,t_duration=0.02,printDetails=0):	
 	loader = essentia.standard.AudioLoader(filename=filename)
 	audio,samplerate,x,x,x,x = loader()
 	mono_audio = np.asarray([audio[i][0] for i in range(0,len(audio)-1)])
@@ -208,18 +208,21 @@ def getFeaturesForOnsets(onsets,filename,t_duration=0.02):
 			features[feature]["stdev"]=np.std(features[feature]["raw"])
 			features[feature]["corrcoef"]=np.corrcoef(t,features[feature]["raw"])[0][1]
 		
-		if (onsetEnd+1500) < len(mono_audio):
-			frameEnd = mono_audio[onsetEnd-1500:onsetEnd]
-			loudnessEnd = loudness(frameEnd)
-			frameNext = mono_audio[onsetEnd:onsetEnd+1500]
-			loudnessNext = loudness(frameNext)
-			loudnessDiff = abs(loudnessEnd - loudnessNext)
+		# if (onsetEnd+1500) < len(mono_audio):
+		# 	frameEnd = mono_audio[onsetEnd-1500:onsetEnd]
+		# 	loudnessEnd = loudness(frameEnd)
+		# 	frameNext = mono_audio[onsetEnd:onsetEnd+1500]
+		# 	loudnessNext = loudness(frameNext)
+		# 	loudnessDiff = abs(loudnessEnd - loudnessNext)
 
 		if (features["Loudness"]["mean"] > 0.001) & (durationAdd > t_duration):# & (loudnessDiff>0.03):
 			
 			sonicevents.append({"start":onsetStart,"end":onsetEnd,"features":features,"audio":eff_frame})
 			onsetStart = onsets[i+1]
 
+		if printDetails:
+			print "    " + str(len(sonicevents)) + " sonicevents found"
+	
 	return (sonicevents, mono_audio)
 
 	
