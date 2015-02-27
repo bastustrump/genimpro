@@ -19,13 +19,18 @@ onset_mode = "hfc" 			#complex
 
 def getOnsetsForFile(filename,printDetails=0,t_silence=-95,min_ms=20):
 
+    global samplerate
+
     s = source(filename)
+
     o = onset(onset_mode,win_s, hop_s)
     o.set_silence(t_silence)
     o.set_minioi_ms(min_ms)
     
     multiplier = 512/hop_s
-    
+    samplerate=s.samplerate
+
+
     onsets = []
     total_frames = 0
     
@@ -43,65 +48,12 @@ def getOnsetsForFile(filename,printDetails=0,t_silence=-95,min_ms=20):
     return onsets
 
 
-
-def getOnsetsForFile2(filename):
-
-	global samplerate
-	print 'Loading audio file...'
-	loader = essentia.standard.AudioLoader(filename=filename)
-	audio,samplerate,x,x,x,x = loader()
-	mono_audio = np.asarray([audio[i][0] for i in range(0,len(audio)-1)])
-	audio = mono_audio  * 4.0 #normalize
-	
-	# Phase 1: compute the onset detection function
-	# The OnsetDetection algorithm tells us that there are several methods available in Essentia,
-	# let's do two of them
-	
-	od1 = OnsetDetection(method = 'hfc')
-	od2 = OnsetDetection(method = 'complex')
-	
-	# let's also get the other algorithms we will need, and a pool to store the results
-	
-	w = Windowing(type = 'hann')
-	fft = FFT() # this gives us a complex FFT
-	c2p = CartesianToPolar() # and this turns it into a pair (magnitude, phase)
-	
-	pool = Pool()
-	
-	# let's get down to business
-	print 'Computing onset detection functions...'
-	for frame in FrameGenerator(audio, frameSize = 1024, hopSize = 512):
-	    mag, phase, = c2p(fft(w(frame)))
-	    pool.add('features.hfc', od1(mag, phase))
-	    pool.add('features.complex', od2(mag, phase))
-	
-	
-	# Phase 2: compute the actual onsets locations
-	onsets = Onsets()
-	
-	print 'Computing onset times...'
-	onsets_hfc = onsets(# this algo expects a matrix, not a vector
-	                    array([ pool['features.hfc'] ]),
-	
-	                    # you need to specify weights, but as there is only a single
-	                    # function, it doesn't actually matter which weight you give it
-	                    [ 1 ])
-	
-	onsets_complex = onsets(array([ pool['features.complex'] ]), [ 1 ])
-
-	retVal = [int(i) for i in onsets_hfc * samplerate]
-	return retVal
-
-
-
-
 def getOnsetsForTrack(track):
 
 	print "    %s (%s): %s" % (track[0],track[1],track[2])
 
 	onsets=[]
 	onsets = getOnsetsForFile(track[2])
-	print "    " + str(len(onsets)) + " onsets found"
 	
 	return (onsets)
 	
@@ -134,14 +86,39 @@ def showAndPlay(events,audio,sequence=[]):
 	p.terminate()
 	
 
-	
-def getFeaturesForOnsets(onsets,filename,t_duration=0.02,printDetails=0):	
-	loader = essentia.standard.AudioLoader(filename=filename)
-	audio,samplerate,x,x,x,x = loader()
-	mono_audio = np.asarray([audio[i][0] for i in range(0,len(audio)-1)])
-	mono_audio = mono_audio  * 4.0 #normalize
+def soniceventsForOnsets(onsets,audio,t_loudness=0.5,printDetails=0):
+    mono_audio = audio  * 10.0 #normalize
+    loudness = essentia.standard.Loudness()
+    
+    sonicevents = []
+    onsetStart = onsets[0]
 
-	effectiveDuration = essentia.standard.EffectiveDuration(sampleRate=samplerate,thresholdRatio=0.000)
+    for i in range(0,len(onsets)):
+        if i < len(onsets)-1:
+            onsetEnd = onsets[i+1]
+        else:
+            onsetEnd = len(mono_audio)
+            
+        frame = mono_audio[onsets[i]:onsetEnd]
+        
+        if (loudness(frame) > t_loudness):
+            sonicevents.append({"start":onsets[i],"end":onsetEnd,"loudness":loudness(frame)})
+            onsetStart = onsets[i+1]
+
+    if printDetails:
+        print "    " + str(len(sonicevents)) + " sonicevents found"
+
+    for i in range(0,len(sonicevents)-1):
+        if sonicevents[i]["end"]<>sonicevents[i+1]["start"]:
+            #glue together
+            sonicevents[i]["end"]=sonicevents[i+1]["start"]
+        
+    return sonicevents
+
+	
+def featuresForSonicevents(sonicevents,audio):	
+
+	effectiveDuration = essentia.standard.EffectiveDuration(sampleRate=samplerate,thresholdRatio=0.01)
 	loudness = essentia.standard.Loudness()
 	zerocrossingrate = essentia.standard.ZeroCrossingRate()
 	w = essentia.standard.Windowing()
@@ -154,29 +131,15 @@ def getFeaturesForOnsets(onsets,filename,t_duration=0.02,printDetails=0):
 	TCToTotal = essentia.standard.TCToTotal()
 
 	Pitch = essentia.standard.PitchYinFFT()
-    
-	sonicevents = []
-	lastDuration_ratio = 0
-	onsetStart = onsets[0]
-	
-	
-	for i in range(0,len(onsets)-2):
-		if i < len(onsets)-1:
-			onsetEnd = onsets[i+1]
-		else:
-			onsetEnd = len(mono_audio)
 
-		duration = (onsetEnd - onsetStart)/samplerate
-		durationAdd = (onsetEnd - onsets[i])/samplerate
+	for event in sonicevents:
 		
-
-		
-		frame = mono_audio[onsetStart:onsetEnd]
+		frame = audio[event["start"]:event["end"]]
 		eff_duration = effectiveDuration(frame)
 
 		length_samples = int(eff_duration * samplerate)
-		eff_frame = mono_audio[onsetStart:onsetStart+length_samples]
-		duration_ratio =  eff_duration / duration
+		eff_frame = audio[event["start"]:event["start"]+length_samples]
+		duration_ratio =  eff_duration / len(frame)
 		
 		featurelist = ["Loudness","ZCR","SpectralCentroid","SpectralComplexity","SpectralRolloff","SpectralFlux"]
 		features = {}
@@ -208,24 +171,8 @@ def getFeaturesForOnsets(onsets,filename,t_duration=0.02,printDetails=0):
 			features[feature]["stdev"]=np.std(features[feature]["raw"])
 			features[feature]["corrcoef"]=np.corrcoef(t,features[feature]["raw"])[0][1]
 		
-		# if (onsetEnd+1500) < len(mono_audio):
-		# 	frameEnd = mono_audio[onsetEnd-1500:onsetEnd]
-		# 	loudnessEnd = loudness(frameEnd)
-		# 	frameNext = mono_audio[onsetEnd:onsetEnd+1500]
-		# 	loudnessNext = loudness(frameNext)
-		# 	loudnessDiff = abs(loudnessEnd - loudnessNext)
+		event["features"]=features
 
-		if (features["Loudness"]["mean"] > 0.001) & (durationAdd > t_duration):# & (loudnessDiff>0.03):
-			
-			sonicevents.append({"start":onsetStart,"end":onsetEnd,"features":features,"audio":eff_frame})
-			onsetStart = onsets[i+1]
-
-		if printDetails:
-			print "    " + str(len(sonicevents)) + " sonicevents found"
-	
-	return (sonicevents, mono_audio)
-
-	
-	
+	return sonicevents
 
 
