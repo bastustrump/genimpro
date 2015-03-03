@@ -5,7 +5,7 @@
 1. Aufbau der Forschungsdaten
 2. [Einsatzerkennung (*onset detection*) & Merkmalsextraktion (*feature extraction*)](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/feature%20extraction.ipynb)
 3. [Vergleich der Merkmalsvektoren verschiedener Beispielklänge](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/compare%20feature%20plots.ipynb)
-4. Gruppierung in Klangfolgen
+4. Gruppierung von Klangereignissen zu Klangfolgen
   1. [Nähe](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping%201.ipynb)
   2. [Ähnlichkeit](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping2.ipynb)
   3. [Kontinuierliche Entwicklung](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping3.ipynb)
