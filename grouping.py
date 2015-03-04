@@ -2,72 +2,56 @@ import recordings as recordings
 import numpy as np
 import operator
 
-newSequenceThreshold = 0.6
+from scipy.ndimage.interpolation import zoom
 
-durationFactor = 1.25
+def similarityVector(event,resolution=5.0,tellfeatures=0):
+    sV = np.array([])
+    for feature in event["features"]:
+        if (type(event["features"][feature])==type(dict())):# & (feature<>"Pitch"):
+            zoomFactor = 1/(len(event["features"][feature]["raw"])/resolution)            
+            sV = np.append(sV,zoom(event["features"][feature]["raw"],zoomFactor))
+            if tellfeatures: print feature
+    #for feature in event["features"]:
+    #    if type(event["features"][feature])<>type(dict()):
+    #        for i in range (0,int(resolution)):
+    #            sV = np.append(sV,event["features"][feature])
+    #        if tellfeatures: print feature
+    return sV
 
-def soniceventHash(features):
+def proximity(i,events,ritardFactor = 1.25):
+	if (i==0) | (i >= len(events)):
+		return 0
+	proximity =  float(events[i]["end"] - events[i]["start"]) / (events[i-1]["end"] - events[i-1]["start"]) * ritardFactor
+	return proximity
 
-	#hex_string = []
-	#hex_string.append(int(sonicevent[4]*100))
-	#hex_string.append("%f5.0" % sonicevent[5]*100)
+def similarityMatrix(i,events, norm=1):
+    similarityVectors = []
+    for n in range(0,(len(events))):
+        similarityVectors.append(similarityVector(events[n]))
+    
+    similarityVectorsArray = np.asanyarray(similarityVectors)
+    distances = np.sqrt((((similarityVectorsArray - similarityVectorsArray[i,:]))**2).sum(axis=1))
+    if norm:
+        distances = distances/np.amax(distances)
+    sorted_distances_indices = np.argsort(distances)
+    return (sorted_distances_indices,distances)
 
-	return "%08d%08d" % (features["effZCR"]*100,features["effLoudness"]*100) #''.join(hex_string)
-
-def hamming_distance(s1, s2):
-    #"""Return the Hamming distance between equal-length sequences"""
-    if len(s1) != len(s2):
-        raise ValueError("Undefined for sequences of unequal length")
-    return sum(ch1 != ch2 for ch1, ch2 in zip(s1, s2))
-
-def getSequencesForSonicevents(sonicevents):
-
-	sequences = []
-	
-	sequenceCount = 0
-	sequenceEventsCount = 0
-	sequenceHypothesis = []
-	test=0
-
-	maxDurationRatio = 1.0
-
-	for n in range(len(sonicevents)):
-		(eventindex,eventindexEnd,features) = map(sonicevents[n].get, ('start', 'end','features'))
-		#sonicevent_hash = soniceventHash(feature)
-
-		if (n<len(sonicevents)-1):
-			(eventindexN,eventindexEndN,featuresN) = map(sonicevents[n+1].get, ('start', 'end','features'))
-			#sonicevent_hashN = soniceventHash(featureN)
-
-		#check for new sequence
-		
-		duration = eventindexEnd-eventindex
-		durationN = eventindexEndN-eventindexN
-		
-		#proximity
-		durationRatio = duration / (durationFactor * durationN)
-		proximityEndProbability = durationRatio / 10.0
+def similarity(i,events):
+    if (i==len(events)-1):
+        return 1
+    (sorted_distances_indices,distances) = similarityMatrix(i,events)
+    return 1-distances[i+1]
 
 
-		#similarity
+def proximityMaxima(events):
+	proximityValues = []
 
-		
-		similarityEndProbability = (abs(features["effLoudness"]-featuresN["effLoudness"]) + abs(features["effZCR"]-featuresN["effZCR"])) / 5.0
-		
-		#= hamming_distance(sonicevent_hash,sonicevent_hashN) / 7.0
-		
-		sequenceEndProbability = proximityEndProbability #(proximityEndProbability * 3.0 + similarityEndProbability + 1.0) / 5.0
-		print sequenceEndProbability
-		
-		sequenceHypothesis.append(n)
-			
-		if (sequenceEndProbability>=newSequenceThreshold):
-			sequenceCount += 1
-			
-			sequences.append(sequenceHypothesis)
+	for i in range (0,len(events)):
+	    proximityValues.append(proximity(i,events))
 
-			sequenceHypothesis = []
-			
-			
+	from scipy.signal import argrelmax
 
-	return sequences
+	proximityArray = np.asarray(proximityValues)
+	proximityMaxima = argrelmax(proximityArray, order=2)
+
+	return proximityMaxima

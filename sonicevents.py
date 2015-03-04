@@ -116,63 +116,77 @@ def soniceventsForOnsets(onsets,audio,t_loudness=0.5,printDetails=0):
     return sonicevents
 
 	
-def featuresForSonicevents(sonicevents,audio):	
+def featuresForSonicevents(sonicevents,audio):
 
-	effectiveDuration = essentia.standard.EffectiveDuration(sampleRate=samplerate,thresholdRatio=0.01)
-	loudness = essentia.standard.Loudness()
-	zerocrossingrate = essentia.standard.ZeroCrossingRate()
-	w = essentia.standard.Windowing()
-	spec = essentia.standard.Spectrum()
-	centroid = essentia.standard.Centroid()
-	SpectralComplexity = essentia.standard.SpectralComplexity()
-	SpectralRolloff = essentia.standard.RollOff()
-	SpectralFlux = essentia.standard.Flux()
-	Envelope = essentia.standard.Envelope()
-	TCToTotal = essentia.standard.TCToTotal()
+    effectiveDuration = essentia.standard.EffectiveDuration(sampleRate=samplerate,thresholdRatio=0.01)
+    loudness = essentia.standard.Loudness()
+    zerocrossingrate = essentia.standard.ZeroCrossingRate()
+    w = essentia.standard.Windowing()
+    spec = essentia.standard.Spectrum()
+    centroid = essentia.standard.Centroid()
+    SpectralComplexity = essentia.standard.SpectralComplexity(sampleRate=samplerate)
+    SpectralRolloff = essentia.standard.RollOff(sampleRate=samplerate)
+    SpectralFlux = essentia.standard.Flux()
+    Envelope = essentia.standard.Envelope()
+    TCToTotal = essentia.standard.TCToTotal()
+    LAT = essentia.standard.LogAttackTime()
+    Pitch = essentia.standard.PitchYinFFT(sampleRate=samplerate)
+    
+    for event in sonicevents:
+        frame = audio[event["start"]:event["end"]]
+        eff_duration = effectiveDuration(frame)
 
-	Pitch = essentia.standard.PitchYinFFT()
+        length_samples = int(eff_duration * samplerate)
+        eff_frame = audio[event["start"]:event["start"]+length_samples]
+        duration_ratio =  eff_duration / len(frame)
 
-	for event in sonicevents:
-		
-		frame = audio[event["start"]:event["end"]]
-		eff_duration = effectiveDuration(frame)
+        featurelist = ["Loudness","ZCR","SpectralCentroid","SpectralComplexity","SpectralRolloff","SpectralFlux","Pitch"]
+        features = {}
+        features["effLength"]=length_samples
+        features["durationRatio"]=duration_ratio
+        features["dynamicBalance"]=TCToTotal(Envelope(frame))
+        features["LogAttackTime"]=LAT(Envelope(frame))
 
-		length_samples = int(eff_duration * samplerate)
-		eff_frame = audio[event["start"]:event["start"]+length_samples]
-		duration_ratio =  eff_duration / len(frame)
-		
-		featurelist = ["Loudness","ZCR","SpectralCentroid","SpectralComplexity","SpectralRolloff","SpectralFlux"]
-		features = {}
-		features["effLength"]=length_samples
-		features["durationRatio"]=duration_ratio
-		features["dynamicBalance"]=TCToTotal(Envelope(frame))
-		
-		for feature in featurelist:
-			features[feature] = {}
-			features[feature]["raw"]=[]
-		
-		for featureframe in FrameGenerator(eff_frame, frameSize = win_s, hopSize = hop_s):
-		    features["Loudness"]["raw"].append(loudness(featureframe))
-		    features["ZCR"]["raw"].append(zerocrossingrate(featureframe))
-		    spectrum = spec(w(featureframe))
-		    features["SpectralCentroid"]["raw"].append(centroid(spectrum))
-		    features["SpectralComplexity"]["raw"].append(SpectralComplexity(spectrum))
-		    features["SpectralRolloff"]["raw"].append(SpectralRolloff(spectrum))
-		    features["SpectralFlux"]["raw"].append(SpectralFlux(spectrum))
-		    #features["Pitch"]["raw"].append(Pitch(spectrum))
+        for feature in featurelist:
+            features[feature] = {}
+            features[feature]["raw"]=[]
 
-		for feature in featurelist:
-			t = np.linspace(0, len(features[feature]["raw"]), num=len(features[feature]["raw"]))
-			features[feature]["median"]=np.median(features[feature]["raw"])
-			features[feature]["mean"]=np.mean(features[feature]["raw"])
-			features[feature]["max"]=np.amax(features[feature]["raw"])
-			features[feature]["min"]=np.amin(features[feature]["raw"])
-			features[feature]["variance"]=np.var(features[feature]["raw"])
-			features[feature]["stdev"]=np.std(features[feature]["raw"])
-			features[feature]["corrcoef"]=np.corrcoef(t,features[feature]["raw"])[0][1]
-		
-		event["features"]=features
+        for featureframe in FrameGenerator(eff_frame, frameSize = hop_s, hopSize = hop_s/2):
+            features["Loudness"]["raw"].append(loudness(featureframe))
+            features["ZCR"]["raw"].append(zerocrossingrate(featureframe))
+            spectrum = spec(w(featureframe))
+            features["SpectralCentroid"]["raw"].append(centroid(spectrum))
+            features["SpectralComplexity"]["raw"].append(SpectralComplexity(spectrum))
+            features["SpectralRolloff"]["raw"].append(SpectralRolloff(spectrum))
+            features["SpectralFlux"]["raw"].append(SpectralFlux(spectrum))
+            
+            (pitch,pitchConfidence) = Pitch(spectrum)
+            if (pitchConfidence>0.5):
+                features["Pitch"]["raw"].append(pitch)
+            else:
+                features["Pitch"]["raw"].append(0.0)
 
-	return sonicevents
+        #interpolate pitch
+        #data = np.asarray(features["Pitch"]["raw"])
+        #mask = np.isnan(data)
+        #if len(mask)<len(data):
+       	# 	data[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), data[~mask])
+       	# 	features["Pitch"]["raw"] = data
+       	#	print mask
+
+        for feature in featurelist:
+            t = np.linspace(0, len(features[feature]["raw"]), num=len(features[feature]["raw"]))
+            if (len(features[feature]["raw"])>0):
+	            features[feature]["median"]=np.median(features[feature]["raw"])
+	            features[feature]["mean"]=np.mean(features[feature]["raw"])
+	            features[feature]["max"]=np.amax(features[feature]["raw"])
+	            features[feature]["min"]=np.amin(features[feature]["raw"])
+	            features[feature]["variance"]=np.var(features[feature]["raw"])
+	            features[feature]["stdev"]=np.std(features[feature]["raw"])
+	            features[feature]["corrcoef"]=np.corrcoef(t,features[feature]["raw"])[0][1]
+
+        event["features"]=features
+
+    return sonicevents
 
 
