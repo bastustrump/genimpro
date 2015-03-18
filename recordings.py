@@ -1,6 +1,8 @@
 import sqlite3 as lite
 from essentia.standard import *
 import numpy as np
+import json
+
 db = lite.connect('genImpro.db')
 c = db.cursor() 
 
@@ -71,8 +73,53 @@ def createTracks():
 		print sqlcommand
 		c.execute(sqlcommand)
 		db.commit()
+
+
+def updateSoniceventsForTrack(track,sonicevents):
+    data = json.dumps(sonicevents)
+    
+    sqlcommand = "UPDATE tracks SET sonicevents=%s where ID=%i" % (repr(data),track[3])
+    c.execute(sqlcommand)
+    db.commit()
+    
+    print "Updated %i sonicevents for track %i" % (len(sonicevents),track[3])
+
+def updateSequencesForTrack(track,sequences,sonicevents):
+    #clear sequences for track
+    sqlcommand = "DELETE FROM sequences where trackID=%i" % (track[3])
+    c.execute(sqlcommand)
+    db.commit()
+    
+    for sequence in sequences:
+        start = sonicevents[sequence[0]]["start"]
+        end = sonicevents[sequence[-1]]["end"]
+        events = json.dumps(sequence)
+        sqlcommand = "INSERT INTO sequences (trackID,start,end,events) values (%i,%i,%i,%s)" % (track[3],start,end,repr(events))
+        c.execute(sqlcommand)
+        db.commit()
+        
+    print "Added %i sequences for track %i" % (len(sequences),track[3])
 		
-		
+def getSoniceventsForTrack(track):
+    sqlcommand = "SELECT sonicevents FROM tracks where ID=%i" % (track[3])
+    c.execute(sqlcommand)
+    data = c.fetchone()
+
+    return json.loads(data[0])
+
+def getSequencesForTrack(track):
+    sqlcommand = "SELECT events FROM sequences where trackID=%i" % (track[3])
+    c.execute(sqlcommand)
+    data = c.fetchall()
+
+    sequences = []
+    
+    for sequence in data:
+        sequences.append(json.loads(sequence[0]))
+        
+    return sequences
+
+    		
 if __name__ == '__main__':
 	listRecodings()
 	
