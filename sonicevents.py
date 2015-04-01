@@ -131,7 +131,9 @@ def featuresForSonicevents(sonicevents,audio):
     TCToTotal = essentia.standard.TCToTotal()
     LAT = essentia.standard.LogAttackTime()
     Pitch = essentia.standard.PitchYinFFT(sampleRate=samplerate)
-    
+    SpectralPeaks = essentia.standard.SpectralPeaks(sampleRate=samplerate)
+    Dissonance = essentia.standard.Dissonance()
+
     for event in sonicevents:
         frame = audio[event["start"]:event["end"]]
         eff_duration = effectiveDuration(frame)
@@ -140,7 +142,7 @@ def featuresForSonicevents(sonicevents,audio):
         eff_frame = audio[event["start"]:event["start"]+length_samples]
         duration_ratio =  eff_duration / len(frame)
 
-        featurelist = ["Loudness","ZCR","SpectralCentroid","SpectralComplexity","SpectralRolloff","SpectralFlux","Pitch"]
+        featurelist = ["Loudness","ZCR","SpectralCentroid","SpectralComplexity","SpectralRolloff","SpectralFlux","Pitch","Roughness"]
         features = {}
         features["effLength"]=length_samples
         features["durationRatio"]=duration_ratio
@@ -159,6 +161,8 @@ def featuresForSonicevents(sonicevents,audio):
             features["SpectralComplexity"]["raw"].append(SpectralComplexity(spectrum))
             features["SpectralRolloff"]["raw"].append(SpectralRolloff(spectrum))
             features["SpectralFlux"]["raw"].append(SpectralFlux(spectrum))
+            peaks = SpectralPeaks(spectrum)
+            features["Roughness"]["raw"].append(Dissonance(peaks[0],peaks[1]))
             
             (pitch,pitchConfidence) = Pitch(spectrum)
             if (pitchConfidence>0.5):
