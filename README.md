@@ -1,24 +1,25 @@
 # GenImpro
 
-##Analysemethodik
+##Analysis Methods
 
-1. Aufbau der Forschungsdaten
-2. [Einsatzerkennung (*onset detection*) & Merkmalsextraktion (*feature extraction*)](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/feature%20extraction.ipynb)
-3. [Vergleich der Merkmalsvektoren verschiedener Beispielklänge](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/compare%20feature%20plots.ipynb)
-4. Gruppierung von Klangereignissen zu Klangfolgen
-  1. [Nähe](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping%201.ipynb)
-  2. [Ähnlichkeit](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping2.ipynb)
-  3. [Kontinuierliche Entwicklung](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping3.ipynb)
-  4. [Zusammenfassung](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping.ipynb)
-5. Phänotyp-Definition
-6. Genotyp-Definition
-7. Strukturelle Analyse der Genotypen
+1. [Onset Detection & Feature Extraction](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/feature%20extraction.ipynb)
+2. [Some feature vectors compared](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/compare%20feature%20plots.ipynb)
+3. Grouping of sonic events
+  1. [Proximity](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping%201.ipynb)
+  2. [Similarity](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping2.ipynb)
+  3. [Contiuity](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping3.ipynb)
+  4. [Summary](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/grouping.ipynb)
+4. [Metadata Management](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/metadata1.ipynb)
+5. Phenotype 
+  1. [Phenotype Definition](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/phenotype1.ipynb)
+  2. [Visualisations](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/phenotype2.ipynb)
+6. Genotype Definition
+7. Structural Analysis
   1. Data-Mining
   2. ...
 
-Quellenverzeichnis
 
-##Voraussetzungen
+##Requirements
 
 Die Beschreibung der Analysemethodik besteht aus mehreren IPython notebooks. [IPython](http://ipython.org/) ist eine interaktive, Browser-basierte Shell der Programmiersprache [Python](http://www.python.org/) mit vielfältigen Möglichkeiten zur Datenvisualisierung.
 
@@ -32,5 +33,3 @@ Die folgenden Erweiterungen zu Python werden zum Ausführen der Skripte benötig
 - [aubio](http://aubio.org): Onset detection
 - [essentia](http://essentia.upf.edu): Klanganalyse, MIR
 
-##Danksagung
-Das Forschungsprojekt "Genetische Improvisation" an der Hochschule für Musik Nürnberg wird gefördert durch die [STAEDTLER Stiftung](http://www.staedtler.de/de/unternehmen/staedtler-stiftung/)
