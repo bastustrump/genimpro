@@ -53,7 +53,7 @@ def getOnsetsForTrack(track):
 	print "    %s (%s): %s" % (track[0],track[1],track[2])
 
 	onsets=[]
-	onsets = getOnsetsForFile(track[2])
+	onsets = getOnsetsForFile(track[2],printDetails=1)
 	
 	return (onsets)
 	
@@ -91,7 +91,7 @@ def soniceventsForOnsets(onsets,audio,t_loudness=0.5,printDetails=0):
     loudness = essentia.standard.Loudness()
     
     sonicevents = []
-    onsetStart = onsets[0]
+    #onsetStart = onsets[0]
 
     for i in range(0,len(onsets)):
         if i < len(onsets)-1:
@@ -103,13 +103,13 @@ def soniceventsForOnsets(onsets,audio,t_loudness=0.5,printDetails=0):
         
         if (loudness(frame) > t_loudness):
             sonicevents.append({"start":onsets[i],"end":onsetEnd,"loudness":loudness(frame)})
-            onsetStart = onsets[i+1]
+            #onsetStart = onsets[i+1]
 
     if printDetails:
         print "    " + str(len(sonicevents)) + " sonicevents found"
 
     for i in range(0,len(sonicevents)-1):
-        if sonicevents[i]["end"]<>sonicevents[i+1]["start"]:
+        if sonicevents[i]["end"] is not sonicevents[i+1]["start"]:
             #glue together
             sonicevents[i]["end"]=sonicevents[i+1]["start"]
         
@@ -172,7 +172,7 @@ def featuresForSonicevents(sonicevents,audio):
 
         #interpolate pitch
         #data = np.asarray(features["Pitch"]["raw"])
-        #mask = np.isnan(data)
+        #mask = np.is(data)
         #if len(mask)<len(data):
        	# 	data[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), data[~mask])
        	# 	features["Pitch"]["raw"] = data

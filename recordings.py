@@ -34,9 +34,6 @@ def getRecordingDetails(recordingID,printDetails=0):
 	c.execute("select date,key from sessions where ID="+str(sessionID))
 	session = c.fetchone()
 	values = [recordingID,session[1],session[0],sessionID,tracks]
-
-
-
 	return values
 
 def getAudioForTrack(track):
@@ -46,17 +43,30 @@ def getAudioForTrack(track):
 	mono_audio = mono_audio  * 4.0 #normalize
 	return mono_audio
 	
-def listRecodings():
+def listRecodings(webservice=0):
 	c.execute("select ID from recordings")
 	values = c.fetchall()
 	
+	IDs = []
+	recordings = []
+
 	for recordingID in values:
 		recordingDetails = getRecordingDetails(recordingID)
-		print "ID %i: %s on %s:" % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
 		
-		for track in recordingDetails[4]:
-			print "    %s (%s): %s" % (track[0],track[1],track[2])
+		if not webservice:
+			print "ID %i: %s on %s:" % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
 		
+		IDs.append(recordingDetails[0])
+		recordings.append(recordingDetails)
+
+		if not webservice:
+			for track in recordingDetails[4]:
+				print "    %s (%s): %s" % (track[0],track[1],track[2])
+
+	if (webservice):
+		return json.dumps(recordings)
+
+	return IDs
 		
 def createTracks():
 	c.execute("select ID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,key from recordings")
@@ -99,11 +109,76 @@ def updateSequencesForTrack(track,sequences,sonicevents):
         db.commit()
         
     print "Added %i sequences for track %i" % (len(sequences),track[3])
+
+
+def updatePhenotypesForTrack(track,sequences,phenotypes):
+    
+    for i in range(0,len(sequences)):
+        events = json.dumps(sequences[i])
+        phenotype = json.dumps(phenotypes[i])
+        sqlcommand = "UPDATE sequences SET phenotype=%s where trackID=%i AND events=%s" % (repr(phenotype),track[3],repr(events))
+        c.execute(sqlcommand)
+        db.commit()
+        
+    print "Updated %i phenotypes for track %i" % (len(phenotypes),track[3])
+
+
+def updateGenotypesForTrack(track,sequences,genotypes):
+    
+    for i in range(0,len(sequences)):
+        events = json.dumps(sequences[i])
+        genotype = json.dumps(genotypes[i].tolist())
+        sqlcommand = "UPDATE sequences SET genotype=%s where trackID=%i AND events=%s" % (repr(genotype),track[3],repr(events))
+        c.execute(sqlcommand)
+        db.commit()
+        
+    print "Updated %i genotypes for track %i" % (len(genotypes),track[3])
+
+
+def getGenotypesForTrack(track):
+    sqlcommand = "SELECT genotype FROM sequences where trackID=%i" % (track[3])
+    c.execute(sqlcommand)
+    data = c.fetchall()
+
+    if len(data)==0:
+    	return None
+
+    if data[0][0] is None:
+    	return None
+
+    genotypes = []
+    
+    for genotype in data:
+        genotypes.append(json.loads(genotype[0]))
+        
+    return genotypes
+
+def getPhenotypesForTrack(track):
+    sqlcommand = "SELECT phenotype FROM sequences where trackID=%i" % (track[3])
+    c.execute(sqlcommand)
+    data = c.fetchall()
+
+    if len(data)==0:
+    	return None
+
+    if data[0][0] is None:
+    	return None
+
+    phenotypes = []
+    
+    for phenotype in data:
+        phenotypes.append(json.loads(phenotype[0]))
+        
+    return phenotypes
+
 		
 def getSoniceventsForTrack(track):
     sqlcommand = "SELECT sonicevents FROM tracks where ID=%i" % (track[3])
     c.execute(sqlcommand)
     data = c.fetchone()
+
+    if data[0] is None:
+    	return None
 
     return json.loads(data[0])
 
@@ -112,6 +187,9 @@ def getSequencesForTrack(track):
     c.execute(sqlcommand)
     data = c.fetchall()
 
+    if data is None:
+    	return None
+
     sequences = []
     
     for sequence in data:
@@ -119,6 +197,12 @@ def getSequencesForTrack(track):
         
     return sequences
 
+def getGenome():
+    sqlcommand = "SELECT CNTR FROM genome order by ID desc LIMIT 1"
+    c.execute(sqlcommand)
+    data = c.fetchone()
+
+    return np.asarray(json.loads(data[0]))
     		
 if __name__ == '__main__':
 	listRecodings()

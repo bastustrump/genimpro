@@ -24,6 +24,7 @@ import StringIO
 import base64
 
 samplerate=48000.0
+tuningFrequency = 440
 
 np.seterr(all='ignore')
 

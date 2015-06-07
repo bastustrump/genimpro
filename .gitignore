@@ -1,5 +1,6 @@
 web/
 1/
+notebooks/.ipynb_checkpoints
 *.sublime*
 *.pyc
 *.pyc
@@ -11,6 +12,7 @@ test.py
 
 *.pyc
 
+genImpro.db
 genimpro.pyc
 
 *.pyc

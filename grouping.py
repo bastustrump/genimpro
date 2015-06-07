@@ -34,13 +34,29 @@ def similarityMatrix(i,events, norm=1):
     distances = np.sqrt((((similarityVectorsArray - similarityVectorsArray[i,:]))**2).sum(axis=1))
     if norm:
         distances = distances/np.amax(distances)
-    sorted_distances_indices = np.argsort(distances)
+
+    #sorted_distances_indices = np.argsort(distances)
+    
     return (sorted_distances_indices,distances)
 
-def similarity(i,events):
+def similarityMatrixP(events, norm=1):
+    similarityVectors = []
+    for n in range(0,(len(events))):
+        similarityVectors.append(similarityVector(events[n]))
+
+    from scipy.spatial import distance
+    similarityMatrix = distance.cdist(similarityVectors, similarityVectors, 'euclidean')
+
+    if norm:
+        similarityMatrix = similarityMatrix/np.amax(similarityMatrix)
+
+    return similarityMatrix
+
+
+def similarity(i,events,distances):
     if (i==len(events)-1):
         return 1
-    (sorted_distances_indices,distances) = similarityMatrix(i,events)
+    #distances = similarityMatrixP(i,events)
     return 1-distances[i+1]
 
 
@@ -143,7 +159,7 @@ def groupEventsByProximity(events):
 
     return sequences
 
-def groupEventsBySimilarity(events,t=0.9):
+def groupEventsBySimilarity(events,distances,t=0.9):
 
     sequences = []
     sequenceHypothesis = []
@@ -151,7 +167,7 @@ def groupEventsBySimilarity(events,t=0.9):
     for n in range(len(events)-1):
         sequenceHypothesis.append(n)
 
-        if (similarity(n,events)<t):
+        if (similarity(n,events,distances[n])<t):
 
             sequences.append(sequenceHypothesis)
             sequenceHypothesis = []
@@ -189,9 +205,9 @@ def combineGroups(sequences,events):
     return sequences
 
 def sequencesForSonicevents(events):
-	sequences = {}
-	sequences["proximity"] = groupEventsByProximity(events)
-	sequences["similarity"] = groupEventsBySimilarity(events,t=0.9) 
-	sequences["continuity"] = groupEventsByContinuity(events,t=4) 
-
-	return combineGroups(sequences,events)
+    sequences = {}
+    similarityMatrix = similarityMatrixP(events)
+    sequences["proximity"] = groupEventsByProximity(events)
+    sequences["similarity"] = groupEventsBySimilarity(events,similarityMatrix,t=0.9) 
+    sequences["continuity"] = groupEventsByContinuity(events,t=4) 
+    return combineGroups(sequences,events)

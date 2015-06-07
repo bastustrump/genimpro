@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<head><title>GENIMPRO</title></head>
+
+<meta charset="utf-8">
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/d3.hexbin.v0.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+
+    <link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic"
+      rel="stylesheet"
+      type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Raleway:400,300,700" rel="stylesheet"
+      type="text/css">
+
+
+<style>
+
+body {
+    overflow:hidden;
+    background-color: darkgray;
+    font-family: Lato;
+	font-weight: 200;
+}
+
+::-webkit-scrollbar { 
+    display: none; 
+}
+
+.vis  {
+  height: 100%;
+  width: 100%;
+}
+
+.vis circle.track0  {
+  fill: #0B615E;
+}
+
+.vis circle.track1  {
+  fill: #0B3861;
+}
+
+.vis circle.track2 {
+  fill: #2F0B3A;
+}
+
+.vis text {
+  fill: white;
+  text-anchor: middle;
+}
+
+.details text {
+  color: white;
+  fill: white;
+  font-size: 20px;
+  text-anchor: middle;
+}
+
+.detailsInnerCircle {
+  fill: white;
+  opacity: 0.5;
+}
+
+.details .detailsView {
+  fill: white;
+}
+
+.alert {
+   width:40%;    
+   margin: 0 auto;
+}
+</style>
+
+<body>
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand disabled" href="#"><span class="glyphicon glyphicon-equalizer" aria-hidden="true"></span> GENIMPRO</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+
+        <li class="dropdown">
+          <a href="#" id="sessionButton"  class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Session <span class="caret"></span></a>
+          <ul class="dropdown-menu" role="menu" id="sessionSelector">
+          </ul>
+        </li>
+
+        <li class="dropdown disabled">
+          <a href="#" id="recordingButton"  class="dropdown-toggle disabled" data-toggle="dropdown" role="button" aria-expanded="false">Aufnahme <span class="caret"></span></a>
+          <ul class="dropdown-menu" role="menu" id="recordingSelector">
+
+          </ul>
+        </li>
+
+
+        <p class="navbar-text" id="navbarTitle"></p>
+
+      </ul>
+      <form class="navbar-form navbar-right" role="search">
+        <div class="form-group">
+          <input type="text" class="form-control" placeholder="Search">
+        </div>
+        <button type="submit" class="btn btn-default disabled"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+      </form>
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="#"><!--Link--></a></li>
+        <li class="dropdown disabled">
+          <a href="#" class="dropdown-toggle disabled" data-toggle="dropdown" role="button" aria-expanded="false">Dropdown <span class="caret"></span></a>
+          <ul class="dropdown-menu" role="menu">
+            <li><a href="#">Action</a></li>
+            <li><a href="#">Another action</a></li>
+            <li><a href="#">Something else here</a></li>
+            <li class="divider"></li>
+            <li><a href="#">Separated link</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+
+<div id="notes"></div>
+
+<div>
+	<svg class="vis"></svg>
+</div>
+
+
+<script>
+
+var lang = "de"
+
+function localisedString(key) {
+	switch(key) {
+	    case "nodata":
+	        switch (lang) {
+	        	case "de":
+	        		return "Keine Daten gefunden.";
+	        	case "en":
+	        		return "No data found.";	        	
+	        }
+	        break;
+
+	    case "SelectSession":
+	        switch (lang) {
+	        	case "de":
+	        		return "Bitte wählen Sie eine Session aus.";
+	        	case "en":
+	        		return "Please select a session.";	        	
+	        }	        
+
+	        break;
+	    default:
+	        return "";
+	}
+}
+
+
+
+function note(note) {
+	$("#notes").html('<div class="alert alert-info alert-dismissible" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + note + '</div>');
+}
+
+
+var trackID=0;
+var samplerate = 48000;
+
+var trackHeight = 180;
+
+var detailsViewSize = 450;
+
+var sessions = [];
+var session = [];
+var recordings = [];
+var recording = [];
+var nTracks=0;
+
+var sequences = [];
+var sequence = [];
+
+var xScale = d3.scale.linear();
+
+
+$(window).load(function(){
+
+	note(localisedString("SelectSession"));
+
+
+     $(function(){
+         $("#sessionSelector").on("click", "li", function(event){
+             var sessionID = jQuery(this).attr("sessionID");
+             $("#sessionButton").html($(this).find('a').text() + ' <span class="caret"></span>');
+             $('#recordingButton').removeClass('disabled');
+             $('#recordingButton').parent().removeClass('disabled');
+             loadSession(parseInt(sessionID));
+         })
+
+         $("#recordingSelector").on("click", "li", function(event){
+             var recordingID = jQuery(this).attr("recordingID");
+             $("#recordingButton").html($(this).find('a').text() + ' <span class="caret"></span>');
+             loadRecording(parseInt(recordingID));
+         })
+
+     })
+});
+
+d3.json("http://localhost:8080/sessions", function(error, data) {
+	sessions = data;
+
+	var sessionSelector = d3.select("#sessionSelector");
+	var sessionLi = sessionSelector.selectAll("li")
+		    .data(sessions)
+		  	.enter().append("li")
+		  	.attr("sessionID", function(d, i) { return sessions[i]["ID"] ; })
+		    .attr("role", "presentation");
+
+	sessionLi.append("a")
+		.attr("role", "menuitem")
+		.attr("tabindex", "-1")
+		.attr("href", "#")
+		.text(function(d, i) { return "Session: " + sessions[i]["key"] ; });
+
+
+});
+
+function loadSession(id) {
+
+	d3.json("http://localhost:8080/sessions/" + id, function(error, data) {
+		recordings = data;
+		var recordingSelector = d3.select("#recordingSelector");
+		var recordingLi = recordingSelector.selectAll("li")
+			    .data(recordings)
+			  	.enter().append("li")
+			  	.attr("recordingID", function(d, i) { return recordings[i]["ID"] ; })
+			    .attr("role", "presentation");
+
+		recordingLi.append("a")
+			.attr("role", "menuitem")
+			.attr("tabindex", "-1")
+			.attr("href", "#")
+			.text(function(d, i) { return "Aufnahme: " + recordings[i]["ID"] ; });
+
+	});
+
+}
+
+
+function loadTrack(id,trackNumber) {
+
+	d3.json("http://localhost:8080/sequences/" + id, function(error, data) {
+
+	    for	(index = 0; index < data.length; index++) {
+	    	var sequence = [];
+	    	sequence["track"] = trackNumber;
+	    	sequence["start"] = data[index]["start"]/samplerate;
+	    	sequence["duration"] = (data[index]["end"] - data[index]["start"])/samplerate;
+	    	sequence["end"] = data[index]["end"]/samplerate;
+	    	sequence["events"] = JSON.parse(data[index]["events"]);
+	    	sequence["ID"] = data[index]["ID"];
+	    	if (data[index]["phenotype"] != null)
+	    		sequence["phenotype"] = JSON.parse(data[index]["phenotype"].replace(/\bNaN\b/g, "null"));
+	    	
+	    	if (data[index]["genotype"] != null)
+	    		sequence["genotype"] = JSON.parse(data[index]["genotype"].replace(/\bNaN\b/g, "null"));
+
+	    	sequences.push(sequence);
+		}
+
+		updateTracks();
+
+	});
+
+
+}
+
+function updateTracks() {
+
+	if (sequences.length==0) {
+		note(localisedString("nodata"));
+		$(".vis").find("*").not("rect, g").remove();
+		return;
+	}
+
+	for (var i=0;i<sequences.length;i++) {
+		if (sequences[i]["end"] > totalDuration) {
+			totalDuration = sequences[i]["end"];
+		}
+	}
+
+	durations = [];
+
+	xScale.domain([0,totalDuration+10])
+		.range([0,parseInt(vis.style("width"))]);
+
+	$.each(sequence, function( index, value ) {
+  		durations[index] = sequence[index]["duration"];
+	});
+
+	vis.on("mouseleave", mouseleave);
+
+	var sequenceView = tracks.selectAll("g").data(sequences);
+
+	sequenceView.enter().append("g");
+
+	
+
+	sequenceView.attr("transform", function(d, i) { return "translate(" + (xScale(1 + sequences[i]["start"] + (sequences[i]["duration"]/2)) - xScale(sequences[i]["duration"]/2)) + "," + (sequences[i]["track"] * trackHeight) + ")"; });
+		
+	
+	sequenceView.selectAll("circle").remove();		
+
+	sequenceView.append("circle")
+		.attr("cy", function(d, i) { return trackHeight/2; })
+	    .attr("cx", function(d, i) { 
+	    	return xScale(sequences[i]["duration"]/2) ; })
+	    .attr("r", function(d, i) { return xScale(sequences[i]["duration"]/2) ; })
+	    .attr("class",function(d, i) { return "track" + sequences[i]["track"] ; })
+	    .attr("sequenceID",function(d, i) { return i; } )
+	    .on("click", clickSequence)
+	    .on("mouseover", mouseover);
+	//sequencesView.enter().append("circle");
+
+	sequenceView.exit().remove();
+
+	/*
+	sequenceCircle.attr("cy", function(d, i) { return trackHeight/2 + sequences[i]["track"] * trackHeight})
+	    .attr("cx", function(d, i) { 
+	    	return xScale(1 + sequences[i]["start"] + (sequences[i]["duration"]/2)) ; })
+	    .attr("r", function(d, i) { return xScale(sequences[i]["duration"]/2) ; })
+	    .attr("class",function(d, i) { return "track" + sequences[i]["track"] ; })
+	    .on("mouseover", mouseover);
+	    */
+
+	details.attr("transform", function(d, i) { return "translate(0," + (50 + (nTracks * trackHeight)) + ")";} );
+
+	clickVis();
+}
+
+function clickSequence(d) {
+
+	 details.transition().duration(50)
+    	.style("opacity", 1);
+
+	d3.select(".detailsView")
+	.transition().duration(200)
+	.style("fill",d3.select(this).style("fill"));
+    //d3.select(this).attr("sequenceID")
+
+}
+
+function clickVis(d) {
+
+	 details.transition().duration(50)
+    	.style("opacity", 0.0);
+
+}
+
+function mouseleave(d) {
+
+  // Fade all the segments.
+  tracks.selectAll("circle")
+  	.transition().duration(200)
+    .style("opacity", 1);
+
+}
+
+function mouseover(d) {
+
+  // Fade all the segments.
+  tracks.selectAll("circle")
+      .style("opacity", 0.3);
+
+	var circle = d3.select(this);
+	circle.transition().duration(10)
+	.style("opacity", 1);
+
+}
+
+
+
+function loadRecording(id) {
+
+	$("#notes").html("");
+	sequences = [];
+	totalDuration = 0;
+
+	d3.json("http://localhost:8080/recordings/" + id, function(error, data) {
+		recording = data[0];
+
+		$("#navbarTitle").text("");
+		for (var i=0;i<recording.tracks.length;i++) {
+
+			//$(".vis").html("");
+			//$(".vis").append('<g transform="translate(0,' + i * trackHeight + ')" id="track' + i + '"></g>');
+			loadTrack(recording.tracks[i].ID,i); 
+
+			$("#navbarTitle").text($("#navbarTitle").text() + recording.tracks[i].playerName + " (" + recording.tracks[i].playerInstrument + ")");
+
+			if (i<recording.tracks.length-1) {
+				$("#navbarTitle").text($("#navbarTitle").text() + ", "); 
+			}
+		}
+
+	 	tracks.attr("height", trackHeight*recording.tracks.length);  
+		nTracks = recording.tracks.length;
+
+  });
+
+}
+
+function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+  var angleInRadians = (angleInDegrees-90) * Math.PI / 180.0;
+
+  return {
+    x: centerX + (radius * Math.cos(angleInRadians)),
+    y: centerY + (radius * Math.sin(angleInRadians))
+  };
+}
+
+function describeArc(x, y, radius, startAngle,endAngle){
+
+    var start = polarToCartesian(x, y, radius, endAngle);
+    var end = polarToCartesian(x, y, radius, startAngle);
+
+    var arcSweep = endAngle - startAngle <= 180 ? "0" : "1";
+
+    var d = [
+        "M", start.x, start.y, 
+        "A", radius, radius, 0, arcSweep, 0, end.x, end.y,
+        "L", start.x, start.y
+    ].join(" ");
+
+    return d;       
+}
+
+
+var vis = d3.select(".vis")
+    .attr("height", 800);
+
+var tracks = vis.append("g")
+	.attr("class","tracks");
+
+var detailsRadius = detailsViewSize/2;
+var dInnerRadius = 10;
+
+var details = vis.append("g")
+	.attr("class","details")
+	.style("visibility", "visible")
+	.style("opacity", 0.0);
+
+var detailsView = details.append("circle")
+		.attr("class","detailsView")
+		.attr("cy", function(d, i) { return detailsViewSize/4; })
+	    .attr("cx", function(d, i) { 
+	    	return parseInt(vis.style("width"))/2; })
+	    .attr("r", function(d, i) { return detailsViewSize/2; });
+
+details.append("text")
+	.attr("x", function(d, i) { 
+	    	return parseInt(vis.style("width"))/2; })
+    .attr("y", 5 + detailsViewSize/4)
+    .text("Klangfolge");
+
+
+    details.append("path")
+    .attr("class", "detailsInnerCircle")
+    .attr("d", describeArc(parseInt(vis.style("width"))/2, detailsViewSize/4, detailsRadius - dInnerRadius, 360-80,80));
+
+     details.append("path")
+    .attr("class", "detailsInnerCircle")
+    .attr("d", describeArc(parseInt(vis.style("width"))/2, detailsViewSize/4, detailsRadius - dInnerRadius, 100,360-100));
+
+</script>
+
+</body>
