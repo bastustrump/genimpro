@@ -96,7 +96,6 @@ class sequences:
         results = db.select('sequences',where="trackID=%i" % (int(ID)))
 
         for row in results:
-            #print rows
             sequences.append(dict(row))
 
         return json.dumps(sequences)

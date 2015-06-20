@@ -34,17 +34,9 @@ body {
   width: 100%;
 }
 
-.vis circle.track0  {
-  fill: #0B615E;
-}
 
-.vis circle.track1  {
-  fill: #0B3861;
-}
 
-.vis circle.track2 {
-  fill: #2F0B3A;
-}
+
 
 .vis text {
   fill: white;
@@ -65,6 +57,14 @@ body {
 
 .details .detailsView {
   fill: white;
+}
+
+.link {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1.5px;
+  opacity: 0.2;
+
 }
 
 .alert {
@@ -175,6 +175,12 @@ function note(note) {
 }
 
 
+var trackColors = [
+["#0B615E","#A05112"],
+["#0B3861","#A05112"],
+["#66055E","#769007"]
+];
+
 var trackID=0;
 var samplerate = 48000;
 
@@ -193,6 +199,17 @@ var sequence = [];
 
 var xScale = d3.scale.linear();
 
+var fitnessScale = [];
+
+ var line = d3.svg.line();
+				//.interpolate(function(points) { return points.join("A 0.1,0.1 0 0 0.1 "); });
+
+fitnessScale[0] = d3.scale.linear();
+fitnessScale[0].range[trackColors[0]];
+fitnessScale[1] = d3.scale.linear();
+fitnessScale[1].range[trackColors[1]];
+fitnessScale[2] = d3.scale.linear();
+fitnessScale[2].range[trackColors[2]];
 
 $(window).load(function(){
 
@@ -216,6 +233,14 @@ $(window).load(function(){
 
      })
 });
+
+function sequenceForID(id) {
+   for (var i=0;i<sequences.length;i++) {
+  		if (sequences[i].ID == id) {
+  			return sequences[i];
+  		}
+   }
+}
 
 d3.json("http://localhost:8080/sessions", function(error, data) {
 	sessions = data;
@@ -262,6 +287,8 @@ function loadTrack(id,trackNumber) {
 
 	d3.json("http://localhost:8080/sequences/" + id, function(error, data) {
 
+		sequenceParameters = ["phenotype","genotype"];
+
 	    for	(index = 0; index < data.length; index++) {
 	    	var sequence = [];
 	    	sequence["track"] = trackNumber;
@@ -270,11 +297,26 @@ function loadTrack(id,trackNumber) {
 	    	sequence["end"] = data[index]["end"]/samplerate;
 	    	sequence["events"] = JSON.parse(data[index]["events"]);
 	    	sequence["ID"] = data[index]["ID"];
-	    	if (data[index]["phenotype"] != null)
-	    		sequence["phenotype"] = JSON.parse(data[index]["phenotype"].replace(/\bNaN\b/g, "null"));
-	    	
-	    	if (data[index]["genotype"] != null)
-	    		sequence["genotype"] = JSON.parse(data[index]["genotype"].replace(/\bNaN\b/g, "null"));
+
+	    	var relations = JSON.parse(data[index]["relations"]);
+			sequence["fitness"] = relations["fitness"];
+			sequence["children"] = relations["children"];
+			sequence["parents"] = relations["parents"];
+
+	    	for (p=0; p < sequenceParameters.length; p++) {
+	    		var parameter = sequenceParameters[p];
+	    		sequence[parameter] = []; 
+				var value = data[index][parameter];
+
+	    		if (value != null) {
+
+	    				value = value.replace(/\bNaN\b/g, "null");
+	    				value = value.replace("[]", "null");
+	    				sequence[sequenceParameters[p]] = JSON.parse(value);
+
+	    			
+	    		}
+	    	}
 
 	    	sequences.push(sequence);
 		}
@@ -294,16 +336,31 @@ function updateTracks() {
 		return;
 	}
 
+	var fitnessMax = 0;
+
 	for (var i=0;i<sequences.length;i++) {
 		if (sequences[i]["end"] > totalDuration) {
 			totalDuration = sequences[i]["end"];
 		}
+
+		if (sequences[i]["fitness"] > fitnessMax) {
+			fitnessMax = sequences[i]["fitness"];
+		}		
 	}
 
 	durations = [];
 
+	console.log(fitnessMax);
+
 	xScale.domain([0,totalDuration+10])
 		.range([0,parseInt(vis.style("width"))]);
+
+	fitnessScale[0].domain([0,fitnessMax])
+	.range(trackColors[0]);
+	fitnessScale[1].domain([0,fitnessMax])
+	.range(trackColors[1]);
+	fitnessScale[2].domain([0,fitnessMax])
+	.range(trackColors[1]);
 
 	$.each(sequence, function( index, value ) {
   		durations[index] = sequence[index]["duration"];
@@ -315,34 +372,42 @@ function updateTracks() {
 
 	sequenceView.enter().append("g");
 
-	
+	var bundle = d3.layout.bundle();
+	var diagonal = d3.svg.diagonal()
+		.projection(function(d) { return [d.x, d.y]; });
 
-	sequenceView.attr("transform", function(d, i) { return "translate(" + (xScale(1 + sequences[i]["start"] + (sequences[i]["duration"]/2)) - xScale(sequences[i]["duration"]/2)) + "," + (sequences[i]["track"] * trackHeight) + ")"; });
-		
+	//var line = d3.svg.line.radial()
+    //.interpolate("bundle")
+    //.tension(.85)
+
+
+
+
 	
-	sequenceView.selectAll("circle").remove();		
+	sequenceView.attr("transform", function(d, i) { return "translate(" + (xScale(1 + sequences[i]["start"] + (sequences[i]["duration"]/2)) - xScale(sequences[i]["duration"]/2)) + "," + (sequences[i]["track"] * trackHeight) + ")"; })
+		.attr("sequenceID",function(d, i) { return sequences[i]["ID"]; } );
+	
+	sequenceView.selectAll("circle").remove();	
 
 	sequenceView.append("circle")
 		.attr("cy", function(d, i) { return trackHeight/2; })
 	    .attr("cx", function(d, i) { 
 	    	return xScale(sequences[i]["duration"]/2) ; })
 	    .attr("r", function(d, i) { return xScale(sequences[i]["duration"]/2) ; })
-	    .attr("class",function(d, i) { return "track" + sequences[i]["track"] ; })
-	    .attr("sequenceID",function(d, i) { return i; } )
+	    //.attr("class",function(d, i) { return "track" + sequences[i]["track"] ; })
+	    .attr("fill", function(d, i) { return fitnessScale[sequences[i]["track"]](sequences[i]["fitness"]) ; })
+	    .attr("sequenceID",function(d, i) { return sequences[i]["ID"]; } )
 	    .on("click", clickSequence)
 	    .on("mouseover", mouseover);
-	//sequencesView.enter().append("circle");
+	
 
+
+
+      	
+            
 	sequenceView.exit().remove();
 
-	/*
-	sequenceCircle.attr("cy", function(d, i) { return trackHeight/2 + sequences[i]["track"] * trackHeight})
-	    .attr("cx", function(d, i) { 
-	    	return xScale(1 + sequences[i]["start"] + (sequences[i]["duration"]/2)) ; })
-	    .attr("r", function(d, i) { return xScale(sequences[i]["duration"]/2) ; })
-	    .attr("class",function(d, i) { return "track" + sequences[i]["track"] ; })
-	    .on("mouseover", mouseover);
-	    */
+	
 
 	details.attr("transform", function(d, i) { return "translate(0," + (50 + (nTracks * trackHeight)) + ")";} );
 
@@ -375,17 +440,98 @@ function mouseleave(d) {
   	.transition().duration(200)
     .style("opacity", 1);
 
+    links=[];
+
+    tracks.selectAll(".link")
+      .style("opacity",0.2);
+
 }
 
+
+
 function mouseover(d) {
+	thisSequence = sequenceForID(parseInt(d3.select(this).attr("sequenceID")));
 
-  // Fade all the segments.
+  var links = [];
+
+   thisSequence.children.forEach(function(c, j) {
+
+	    	var s = [],t=[];
+	        s.x = xScale(1 + thisSequence.start + thisSequence.duration/2);
+	        s.y = (thisSequence.track * trackHeight) + trackHeight/2;
+	  		
+	        child = sequenceForID(c[0]);
+	  		t.x = xScale(1 + child.start + child.duration/2);
+	  		t.y = (child.track * trackHeight) + trackHeight/2;
+
+       		links.push([[s.x,s.y],[t.x,t.y]]);
+        });
+  	console.log(links);
+
+
+
+  var path = tracks.selectAll(".link")
+    .data(links);
+
+
+    path.enter().append("path");
+
+
+    path.attr("class","link")
+      	.attr("d", function(d,i) { return line(d); })
+		.style("opacity",1.0);
+
+	path.exit().remove();
+
+   var children = [];   
+
+   $.each(thisSequence["children"], function( index, value ) {
+  		children.push(value[0]);
+	});
+
   tracks.selectAll("circle")
-      .style("opacity", 0.3);
+      .style("opacity", function(d, i) {
+      	if ($.inArray(sequences[i]["ID"], children) != -1) {
+      		return 0.8;
+      	} else {
+      		return 0.2;
+      	}
 
-	var circle = d3.select(this);
-	circle.transition().duration(10)
-	.style("opacity", 1);
+      });
+
+  d3.select(this).style("opacity",1.0);
+
+
+  //tracks.selectAll("circle").moveToFront();
+
+/*
+	var links = [];
+	sequences.forEach(function(d, i) {
+	    
+		
+	    d.children.forEach(function(c, j) {
+
+	    	var s = [],t=[];
+	        s.x = xScale(1 + d.start + d.duration/2);
+	        s.y = (d.track * trackHeight) + trackHeight/2;
+	  		
+	        child = sequenceForID(c[0]);
+	  		t.x = xScale(1 + child.start + child.duration/2);
+	  		t.y = (child.track * trackHeight) + trackHeight/2;
+
+       		links.push({"sourceID":d.ID,"points":[[s.x,s.y],[t.x,t.y]]});
+        });
+    }); */
+
+
+/*
+.attr("class", function(d) { return "link source-" + d.sourceID; })
+  tracks.selectAll(".link")
+      .style("opacity",0.2);
+
+  tracks.selectAll(".link.source-" + thisSequence.ID) */
+      
+
 
 }
 

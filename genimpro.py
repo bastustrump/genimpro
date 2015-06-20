@@ -226,6 +226,35 @@ def genotypesForSequences(phenotypes):
     return genotypes
 
 
+from scipy.spatial import distance
+
+def calculateRelationsForGenotypes(genotypes,sequenceData,t_fitness=0.2,n_relations=10):
+    matrix = distance.cdist(genotypes, genotypes, 'euclidean')
+    matrix = matrix/np.amax(matrix)
+    
+    relations = []
+    
+    for i in range(len(genotypes)):
+        relation = {}
+        
+        sorted_distances_indices = np.argsort(matrix[i])
+        relation["children"] = []
+        relation["parents"] = []
+        
+        for n in range(1,len([x for x in matrix[i] if x<t_fitness])):
+            sequenceIndex = sorted_distances_indices[n]
+
+            if sequenceData[i][2] < sequenceData[sequenceIndex][1]:
+                relation["children"].append([sequenceData[sequenceIndex][0],1-matrix[i][sequenceIndex]])
+            else:
+                relation["parents"].append([sequenceData[sequenceIndex][0],1-matrix[i][sequenceIndex]])
+
+        relation["fitness"] = len(relation["children"])
+
+        relations.append(relation)
+    
+    return relations
+
 
 if __name__ == '__main__':
 	

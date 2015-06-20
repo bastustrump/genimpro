@@ -135,6 +135,18 @@ def updateGenotypesForTrack(track,sequences,genotypes):
     print "Updated %i genotypes for track %i" % (len(genotypes),track[3])
 
 
+def updateRelationsForTrack(track,sequences,relations):
+    
+    for i in range(0,len(relations)):
+    	events = json.dumps(sequences[i])
+    	relation = json.dumps(relations[i])
+        sqlcommand = "UPDATE sequences SET relations=%s where trackID=%i AND events=%s" % (repr(relation),track[3],repr(events))
+        c.execute(sqlcommand)
+        db.commit()
+        
+    print "Updated relations for track %i" % (track[3])
+
+
 def getGenotypesForTrack(track):
     sqlcommand = "SELECT genotype FROM sequences where trackID=%i" % (track[3])
     c.execute(sqlcommand)
@@ -196,6 +208,45 @@ def getSequencesForTrack(track):
         sequences.append(json.loads(sequence[0]))
         
     return sequences
+
+def getRecordingIDforTrack(trackID):
+    sqlcommand = "SELECT recordingID FROM tracks where ID=%i" % (trackID)
+    c.execute(sqlcommand)
+    data = c.fetchone()
+    return data[0]
+
+
+
+def getSequenceIDsForTrack(track):
+    sqlcommand = "SELECT ID,start,end FROM sequences where trackID=%i" % (track[3])
+    c.execute(sqlcommand)
+    data = c.fetchall()
+
+    if data is None:
+        return None
+
+    sequences = []
+    
+    for sequence in data:
+        sequence = list(sequence)
+        sequence.append(track[3])
+        sequences.append(sequence)
+        
+    return sequences
+
+def prepareDataForRelations(trackID):
+    recordingID = getRecordingIDforTrack(trackID)
+    recordingDetails = getRecordingDetails(recordingID)
+    recordingTracks = recordingDetails[4]
+    
+    genotypes = []
+    sequenceData = []
+    
+    for track in recordingTracks:
+        genotypes.extend(getGenotypesForTrack(track))
+        sequenceData.extend(getSequenceIDsForTrack(track))
+    
+    return (genotypes,sequenceData)
 
 def getGenome():
     sqlcommand = "SELECT CNTR FROM genome order by ID desc LIMIT 1"
