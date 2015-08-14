@@ -1,6 +1,8 @@
 web/
 1/
 notebooks/.ipynb_checkpoints
+.ipynb_checkpoints
+
 *.sublime*
 *.pyc
 *.pyc
