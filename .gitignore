@@ -12,7 +12,7 @@ test.py
 
 *.pyc
 
-genImpro.db
+*.db
 genimpro.pyc
 
 *.pyc
