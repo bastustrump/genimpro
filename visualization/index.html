@@ -203,7 +203,19 @@ var trackColors = [
 ["#66055E","#769007"]
 ];
 
-var webserviceHost = "http://localhost:8080/";
+var webserviceHost;
+
+if  (window.location.protocol=="file:") {
+
+	webserviceHost = "http://localhost:8080/";
+
+} else {
+
+	webserviceHost = "http://forschung.hfm-nuernberg.de/genimpro-webservice/";
+
+}
+
+
 var trackID=0;
 var samplerate = 48000;
 
@@ -769,7 +781,7 @@ function loadRecording(id) {
 	sequences = [];
 	totalDuration = 0;
 
-	d3.json("http://localhost:8080/recordings/" + id, function(error, data) {
+	d3.json(webserviceHost + "recordings/" + id, function(error, data) {
 		recording = data[0];
 
 		$("#navbarTitle").text("");
