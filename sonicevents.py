@@ -17,6 +17,8 @@ win_s = 512/2             # fft size
 hop_s = win_s/2           # hop size
 onset_mode = "hfc" 			#complex
 
+samplerate = 48000.0
+
 def getOnsetsForFile(filename,printDetails=0,t_silence=-95,min_ms=20):
 
     global samplerate
@@ -48,14 +50,55 @@ def getOnsetsForFile(filename,printDetails=0,t_silence=-95,min_ms=20):
     return onsets
 
 
+def getOnsetsForAudio(audio,printDetails=0):
+    from essentia import Pool, array
+    
+    od1 = OnsetDetection(method = 'hfc')
+    od2 = OnsetDetection(method = 'complex') 
+    od3 = OnsetDetection(method = 'flux')
+    
+    
+    onsetsSamples = []
+
+    w = Windowing(type = 'hann')
+    fft = FFT() 
+    c2p = CartesianToPolar() 
+    
+    pool = Pool()
+    
+
+    for frame in FrameGenerator(audio, frameSize = 1024, hopSize = 512):
+        mag, phase, = c2p(fft(w(frame)))
+        pool.add('features.hfc', od1(mag, phase))
+        pool.add('features.complex', od2(mag, phase))
+        pool.add('features.flux', od3(mag, phase))
+
+    onsets = Onsets()
+
+    onsets_times = onsets(array([ pool['features.hfc'] ,  pool['features.complex'],  pool['features.flux'] ]), [ 5,1,1 ])
+        
+    marker = AudioOnsetsMarker(onsets = onsets_times, type = 'beep')
+    marked_audio = marker(audio)
+    
+    if printDetails:
+        print "    " + str(len(onsets_times)) + " onsets found"
+
+    for onset in onsets_times:
+        onsetsSamples.append(int(onset * 44100))
+        
+    
+    return onsetsSamples
+
+
 def getOnsetsForTrack(track):
 
-	print "    %s (%s): %s" % (track[0],track[1],track[2])
+    print "    %s (%s): %s" % (track[0],track[1],track[2])
+    audio = recordings.getAudioForTrack(track)
+    onsets=[]
+    #onsets = getOnsetsForFile(track[2],printDetails=1)
+    onsets = getOnsetsForAudio(audio,printDetails=1)
 
-	onsets=[]
-	onsets = getOnsetsForFile(track[2],printDetails=1)
-	
-	return (onsets)
+    return (onsets)
 	
 def showAndPlay(events,audio,sequence=[]):
 	from utility import float2pcm

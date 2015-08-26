@@ -49,7 +49,7 @@ def analyseTrack(track,updateAll=0):
         genotypes = genotypesForSequences(sequences)
         recordings.updateGenotypesForTrack(track,sequences,genotypes)
 
-        return
+        return 
         
     if (sequences==None) | updateAll:
         sequences = grouping.sequencesForSonicevents(sonicevents)
@@ -61,7 +61,7 @@ def analyseTrack(track,updateAll=0):
         genotypes = genotypesForSequences(sequences)
         recordings.updateGenotypesForTrack(track,sequences,genotypes)
         
-        return
+        return 
         
     if (phenotypes==None) | updateAll:
         phenotypes = phenotypesForSequences(sequences,sonicevents,audio)
@@ -76,7 +76,8 @@ def analyseTrack(track,updateAll=0):
         genotypes = genotypesForSequences(phenotypes)
         recordings.updateGenotypesForTrack(track,sequences,genotypes)        
         
-        return
+        return 
+
 
 
 def eventPlot(event,filename):
