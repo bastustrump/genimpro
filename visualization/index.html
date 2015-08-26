@@ -7,6 +7,8 @@
 <script src="http://d3js.org/d3.hexbin.v0.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
 
     <link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic"
@@ -122,9 +124,7 @@ body {
 
         <li class="dropdown disabled">
           <a href="#" id="recordingButton"  class="dropdown-toggle disabled" data-toggle="dropdown" role="button" aria-expanded="false">Aufnahme <span class="caret"></span></a>
-          <ul class="dropdown-menu" role="menu" id="recordingSelector">
-
-          </ul>
+          <ul class="dropdown-menu" role="menu" id="recordingSelector"></ul>
         </li>
 
 
@@ -198,10 +198,10 @@ function note(note) {
 
 
 var trackColors = [
-["#0B615E","#A05112"],
-["#0B3861","#A05112"],
-["#66055E","#769007"]
-];
+	["#0B615E","#A05112"],
+	["#0B3861","#A05112"],
+	["#66055E","#769007"]
+	];
 
 var webserviceHost;
 
@@ -242,8 +242,8 @@ var sequence = [];
 var xScale = d3.scale.linear();
 
 var similarityLinkScale = d3.scale.linear()
-.domain([0.7,1.0])
-.range([0.1,2.0]);
+	.domain([0.7,1.0])
+	.range([0.1,2.0]);
 
 var fitnessScale = [];
 

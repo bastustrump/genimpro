@@ -1,77 +1,92 @@
+#! /usr/bin/env python
+
 import sqlite3 as lite
 import sys
 import os
 import aifc
 import struct
 import uuid
+import pprint
 
 db = lite.connect('genImpro.db')
 c = db.cursor() 
 
-def import_audio(audiofile,sessionID):
+pp = pprint.PrettyPrinter(indent=4)
 
-	print "audiofile %s" % (audiofile)
-	
-	a=aifc.open(audiofile,"r")
-	a.getnchannels()
-	data = a.readframes(a.getnframes())
-	num_samples = a.getnframes() * a.getnchannels()
-	if a.getsampwidth() == 1:
-		unpacked_samples = struct.unpack(str(num_samples)+'b', data)
-		unpacked_samples = [x * 256 for x in unpacked_samples]
-	elif a.getsampwidth() == 2:
-		unpacked_samples = struct.unpack(str(num_samples)+'h', data)
-	else:
-		raise Exception("Sorry, wrong samplewidth")
-	filenames= []
-	channel=0
-	for channel in range(0,a.getnchannels()):
-		print "channel " + str(channel)
-		unpacked_channel = [unpacked_samples[i] for i in range(channel, num_samples, 2)]
-		filenames.append(str(sessionID) +  "/" + str(uuid.uuid4()) + ".aiff")
-		b=aifc.open(filenames[channel],"w")
-		b.setnchannels(1)
-		b.setsampwidth(a.getsampwidth())
-		b.setframerate(a.getframerate())
-		packed_channel = struct.pack(str(len(unpacked_channel))+'h',*unpacked_channel)
-		b.writeframes(packed_channel)
-		b.close()
-	a.close()
-	return filenames
+def importAudio(audiofile,sessionID):
+    
+    if not (audiofile.lower().endswith("aiff") | audiofile.lower().endswith("aif")):
+        raise Exception("Sorry, wrong fileformat")
+    
+    print "audiofile %s" % (audiofile)
+    
+    a=aifc.open(audiofile,"r")
+    data = a.readframes(a.getnframes())
+    num_samples = a.getnframes() * a.getnchannels()
+    
+    if a.getsampwidth() == 1:
+        unpacked_samples = struct.unpack(str(num_samples)+'b', data)
+        unpacked_samples = [x * 256 for x in unpacked_samples]
+    elif a.getsampwidth() == 2:
+        unpacked_samples = struct.unpack(str(num_samples)+'h', data)
+    else:
+        raise Exception("Sorry, wrong samplewidth")
+
+    channel=0
+    
+    sqlcommand = "INSERT INTO recordings ('sessionID','key') VALUES (%i,'%s');" % (sessionID,audiofile)
+    #print sqlcommand
+    c.execute(sqlcommand)
+    db.commit()
+    
+    recordingID = c.lastrowid 
+    
+    print "Recording " + str(recordingID) + " in session " + str(sessionID)
+    
+    for channel in range(0,a.getnchannels()):
+        unpacked_channel = [unpacked_samples[i] for i in range(channel, num_samples, 2)]
+        filename = str(sessionID) +  "/" + str(uuid.uuid4()) + ".aiff"
+        b=aifc.open(filename,"w")
+        b.setnchannels(1)
+        b.setsampwidth(a.getsampwidth())
+        b.setframerate(a.getframerate())
+        packed_channel = struct.pack(str(len(unpacked_channel))+'h',*unpacked_channel)
+        b.writeframes(packed_channel)
+        b.close()
+        
+        playerID = raw_input("PlayerID for channel " + str(channel) + ":")
+        playerID=int(playerID)
+        
+        if (any(player[0] == playerID for player in players)):
+            sqlcommand = "INSERT INTO tracks ('recordingID','playerID','audiofile') VALUES (%i,'%i','%s');" % (recordingID,playerID,filename)
+            #print sqlcommand
+            c.execute(sqlcommand)
+            db.commit()
+            player = [player for player in players if player[0] == playerID][0]
+            print player
+            print "    Channel " + str(channel) + ": " + player[1] + " on " + player[2]
+        else:
+            raise Exception("Sorry, wrong player ID")
+        
+    a.close()
 
 
 
 if __name__ == '__main__':
 	
-	c.execute("select ID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,key from recordings where audiofile2 IS NULL")
-	values = c.fetchall()
-	
-	for recordingID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,key in values:
-		c.execute("select name,instrument from players where ID="+str(playerCh1))
-		player1 = c.fetchone()
-		if len(player1)==0:
-			raise Exception("No valid player ID")
-		c.execute("select name,instrument from players where ID="+str(playerCh2))
-		player2 = c.fetchone()		
-		if len(player2)==0:
-			raise Exception("No valid player ID")		
+	c.execute("select id,name,instrument from players")
+	players = c.fetchall()
 
-		c.execute("select date,key from sessions where ID="+str(sessionID))
-		session = c.fetchone()	
-		if len(session)==0:
-			raise Exception("No valid session ID")	
-							
-		print "Processing Session ID " + str(sessionID) + " on " + str(session[0]) + " " + str(session[1]) 
-		#channel_filenames=["",""]
-		channel_filenames = import_audio(str(audiofile1),sessionID)
-		print "   Channel 0: Player %i (%s) on %s - file %s" % (playerCh1, player1[0],player1[1],channel_filenames[0])
-		print "   Channel 1: Player %i (%s) on %s - file %s" % (playerCh2, player2[0],player2[1],channel_filenames[1])
-		
-		sqlcommand = "INSERT INTO recordings ('sessionID','audiofile1','audiofile2','playerCh1','playerCh2','key') VALUES (%i,'%s','%s',%i,%i,'%s');" % (sessionID,channel_filenames[0],channel_filenames[1],playerCh1,playerCh2,key)
-		#print sqlcommand
-		c.execute(sqlcommand)
-		db.commit()
+	pp.pprint(players)
 
+	sessionID = int(sys.argv[1])
+	files = sys.argv[2:]
+
+	print "Importing Session " + str(sessionID) + "..."
+
+	print files
+	for audiofile in files:
+		importAudio(audiofile,sessionID)
 
 
 #with db:
