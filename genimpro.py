@@ -106,18 +106,38 @@ def plot(events):
 def analyseRecording(recordingID):
 	
 	recordingDetails = recordings.getRecordingDetails(recordingID)
-	print "ID %i: %s on %s:" % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
+	print "Anaysing ID %i: %s on %s..." % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
 	
-	for track in recordingDetails[4]:
-		analyseTrack(track)	
-			
+    for track in recordingDetails[4]:
+        print track
+        analyseTrack(track,updateAll=updateAll)
+    
+    for track in recordingDetails[4]:
+        print "Calculating Relations..."
+        addRelations(track)
 
+def analyseSession(sessionID):
+    recordings = genimpro.recordings.listRecodings(sessionID)
+    for recordingID in recordings:
+        analyseRecording(recordingID)
+			
+def isEven(number):
+        return number % 2 == 0
 
 def phenotypeForSequence(sequence,sonicevents,audio):
     
     events = sonicevents[sequence[0]:sequence[-1]]
     
-    sequenceAudio = audio[events[0]["start"]:events[-1]["end"]]
+    eventEndsample = events[-1]["end"]
+
+    #always even framesize
+    #if (((events[-1]["end"] - events[0]["start"]) % 2) == 0):
+
+    if not isEven(events[-1]["end"] - events[0]["start"]):
+        eventEndsample = eventEndsample + 1
+
+
+    sequenceAudio = audio[events[0]["start"]:eventEndsample]
     
     sequenceFeatures = {}
     sequenceFeatures["duration"] = []

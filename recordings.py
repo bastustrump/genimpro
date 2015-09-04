@@ -43,30 +43,35 @@ def getAudioForTrack(track):
 	mono_audio = mono_audio  * 4.0 #normalize
 	return mono_audio
 	
-def listRecodings(webservice=0):
-	c.execute("select ID from recordings")
-	values = c.fetchall()
-	
-	IDs = []
-	recordings = []
+def listRecodings(sessionID=None,webservice=0):
+    if sessionID is not None:
+        sqlQuery = "select ID from recordings where sessionID=" + str(sessionID)
+    else:
+        sqlQuery = "select ID from recordings"
 
-	for recordingID in values:
-		recordingDetails = getRecordingDetails(recordingID)
-		
-		if not webservice:
-			print "ID %i: %s on %s:" % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
-		
-		IDs.append(recordingDetails[0])
-		recordings.append(recordingDetails)
+    c.execute(sqlQuery)
+    values = c.fetchall()
 
-		if not webservice:
-			for track in recordingDetails[4]:
-				print "    %s (%s): %s" % (track[0],track[1],track[2])
+    IDs = []
+    recordings = []
 
-	if (webservice):
-		return json.dumps(recordings)
+    for recordingID in values:
+    	recordingDetails = getRecordingDetails(recordingID)
+    	
+    	if not webservice:
+    		print "ID %i: %s on %s:" % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
+    	
+    	IDs.append(recordingDetails[0])
+    	recordings.append(recordingDetails)
 
-	return IDs
+    	if not webservice:
+    		for track in recordingDetails[4]:
+    			print "    %s (%s): %s" % (track[0],track[1],track[2])
+
+    if (webservice):
+    	return json.dumps(recordings)
+
+    return IDs
 		
 def createTracks():
 	c.execute("select ID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,key from recordings")

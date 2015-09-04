@@ -170,14 +170,14 @@ def wavPlayer(data, rate):
 #     wavPlayer(event["audio"],samplerate)
 
 def plotOnsets(onsetRange,audio):
-    plt.figure(figsize=(20, 8), dpi=400)
+    plt.figure(figsize=(40, 16), dpi=600)
     plt.plot(audio[onsetRange[0]:onsetRange[-1]],'0.5',label="Audio Waveform",linewidth=0.7)
     for onset in onsetRange:
         plt.axvline(x=onset-onsetRange[0],linewidth=0.5,color='g')
     wavPlayer(audio[onsetRange[0]:onsetRange[-1]],samplerate)
 
 def plotOnsetsAndSonicevents(onsetRange,sonicevents,audio):
-    plt.figure(figsize=(20, 8), dpi=400)
+    plt.figure(figsize=(40, 16), dpi=600)
     plt.plot(audio[onsetRange[0]:onsetRange[-1]],'0.5',label="Audio Waveform",linewidth=0.7)
     SELoudness=[]
     SELoudnessTimestamp=[]
@@ -224,7 +224,7 @@ def plotFeaturesWithPlayer(events,audio,showFeatures=[],showNumbers=0,showStatis
     colorindex = 0
     featureindex = 0
     
-    fig = plt.figure(figsize=(35, 20), dpi=400)
+    fig = plt.figure(figsize=(70, 40), dpi=600)
     ax1 = fig.add_subplot(221)
     plt.xlabel('time (seconds)')
     plt.plot(t_audio,samples,'0.7',label="Audio Waveform",linewidth=2,clip_on=False)

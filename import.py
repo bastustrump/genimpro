@@ -7,6 +7,7 @@ import aifc
 import struct
 import uuid
 import pprint
+import genimpro
 
 db = lite.connect('genImpro.db')
 c = db.cursor() 
@@ -87,6 +88,8 @@ if __name__ == '__main__':
 	print files
 	for audiofile in files:
 		importAudio(audiofile,sessionID)
+
+    genimpro.analyseSession(sessionID)
 
 
 #with db:
