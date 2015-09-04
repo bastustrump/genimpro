@@ -8,7 +8,7 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
 
-<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+<link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
 
     <link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic"
@@ -68,7 +68,6 @@ body {
 
 .playerButton {
   fill: white;
-  hover: steelblue;
   width: 20px;
   height: 20px;
 }
@@ -137,8 +136,8 @@ body {
         </div>
         <button type="submit" class="btn btn-default disabled"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
       </form>
-      <ul class="nav navbar-nav navbar-right">
-        <li><a href="#"><!--Link--></a></li>
+      <!--<ul class="nav navbar-nav navbar-right">
+        <li><a href="#"></a></li>
         <li class="dropdown disabled">
           <a href="#" class="dropdown-toggle disabled" data-toggle="dropdown" role="button" aria-expanded="false">Dropdown <span class="caret"></span></a>
           <ul class="dropdown-menu" role="menu">
@@ -149,7 +148,7 @@ body {
             <li><a href="#">Separated link</a></li>
           </ul>
         </li>
-      </ul>
+      </ul>-->
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
 </nav>
@@ -179,9 +178,9 @@ function localisedString(key) {
 	    case "SelectSession":
 	        switch (lang) {
 	        	case "de":
-	        		return "Bitte wählen Sie eine Session aus.";
+	        		return "Bitte wählen Sie eine Session und ein Aufnahme aus.";
 	        	case "en":
-	        		return "Please select a session.";	        	
+	        		return "Please select a session and a recording.";	        	
 	        }	        
 
 	        break;
@@ -214,8 +213,6 @@ if  (window.location.protocol=="file:") {
 	webserviceHost = "http://forschung.hfm-nuernberg.de/genimpro-webservice/";
 
 }
-
-console.log(webserviceHost);
 
 
 var trackID=0;
@@ -264,6 +261,7 @@ var genotypeScaleY = d3.scale.linear();
 var genotypeScaleX = d3.scale.ordinal();
 
 var clickedSequence = null;
+var parameterLock = false;
 
 
 $(window).load(function(){
@@ -274,8 +272,7 @@ $(window).load(function(){
          $("#sessionSelector").on("click", "li", function(event){
              var sessionID = jQuery(this).attr("sessionID");
              $("#sessionButton").html($(this).find('a').text() + ' <span class="caret"></span>');
-             $('#recordingButton').removeClass('disabled');
-             $('#recordingButton').parent().removeClass('disabled');
+             $("#recordingButton").html("Aufnahme " + ' <span class="caret"></span>');
              loadSession(parseInt(sessionID));
          })
 
@@ -316,17 +313,40 @@ d3.json(webserviceHost + "sessions", function(error, data) {
 
 });
 
-function loadSession(id) {
+function resetVis() {
 
 	nTracks = 0;
+
+	sequences = [];
+	//$(".vis").find("*").not("rect, g").remove();
+	totalDuration = 0;
+
+	$("#navbarTitle").text("");
+}
+
+
+function loadSession(id) {
+
+	$('#recordingButton').addClass('disabled');
+	$('#recordingButton').parent().addClass('disabled');
+
+	resetVis();
+	
 	d3.json(webserviceHost + "sessions/" + id, function(error, data) {
 		recordings = data;
+
+		
 		var recordingSelector = d3.select("#recordingSelector");
-		var recordingLi = recordingSelector.selectAll("li")
-			    .data(recordings)
-			  	.enter().append("li")
-			  	.attr("recordingID", function(d, i) { return recordings[i]["ID"] ; })
-			    .attr("role", "presentation");
+		var recordingLi = recordingSelector.selectAll("li").data(recordings);
+
+		recordingLi.exit().remove();
+		recordingLi.enter().append("li");
+
+
+		recordingLi.attr("recordingID", function(d, i) { return recordings[i]["ID"] ; })
+		    .attr("role", "presentation")
+
+		recordingLi.selectAll("a").remove();
 
 		recordingLi.append("a")
 			.attr("role", "menuitem")
@@ -334,10 +354,42 @@ function loadSession(id) {
 			.attr("href", "#")
 			.text(function(d, i) { return "Aufnahme: " + recordings[i]["ID"] ; });
 
+		
+
+	     $('#recordingButton').removeClass('disabled');
+	     $('#recordingButton').parent().removeClass('disabled');
+
 	});
 
 }
 
+function loadRecording(id) {
+
+	$("#notes").html("");
+	resetVis();
+
+	d3.json(webserviceHost + "recordings/" + id, function(error, data) {
+		recording = data[0];
+
+		for (var i=0;i<recording.tracks.length;i++) {
+
+			//$(".vis").html("");
+			//$(".vis").append('<g transform="translate(0,' + i * trackHeight + ')" id="track' + i + '"></g>');
+			loadTrack(recording.tracks[i].ID,i); 
+
+			$("#navbarTitle").text($("#navbarTitle").text() + recording.tracks[i].playerName + " (" + recording.tracks[i].playerInstrument + ")");
+
+			if (i<recording.tracks.length-1) {
+				$("#navbarTitle").text($("#navbarTitle").text() + ", "); 
+			}
+		}
+
+	 	tracks.attr("height", trackHeight*recording.tracks.length);  
+		nTracks = recording.tracks.length;
+
+  });
+
+}
 
 function loadTrack(id,trackNumber) {
 
@@ -591,6 +643,11 @@ function genotypeBarMouseover(d) {
 
 function chartareaMouseleave(d) {
 
+	if (parameterLock) {
+		return;
+	}
+
+
 	var sequenceView = tracks.selectAll("g")
 
 	graphView.selectAll(".geneLine")
@@ -612,9 +669,12 @@ function chartareaMouseleave(d) {
 
 function clickVis(d) {
 
+	console.log("clickVis");
+
 	clickedSequence = null;
 	mouseleave();
-	 details.transition().duration(500)
+	
+	details.transition().duration(500)
     	.style("opacity", 0.0);	
 
     $( ".playerSpace" ).html( "" );
@@ -637,20 +697,27 @@ function mouseleave(d) {
 
   } else {
 
+   var children = [];   
 
+   $.each(clickedSequence["children"], function( index, value ) {
+  		children.push(value[0]);
+	});
 
-	  tracks.selectAll("g")
-	  	.transition().duration(300)
-	  	.style("opacity", function(d, i) {
-
-
-	      	if (sequences[i]["ID"] == clickedSequence["ID"]) {
+	tracks.selectAll("g")
+		.transition().duration(300)
+  	  	.style("opacity", function(d, i) {
+  	  		if (sequences[i]["ID"] == clickedSequence["ID"]) {
 	      		return 1.0;
+	      	} 
+
+	      	if ($.inArray(sequences[i]["ID"], children) != -1) {
+	      		return 0.6;
 	      	} else {
-	      		return 0.5;
+	      		return 0.1;
 	      	}
 
-	      });
+      });
+
 
   }
 
@@ -711,16 +778,14 @@ function updateLinks(sequence) {
 }
 
 function mouseover(d) {
+
+	if (clickedSequence != null) {
+		return;
+	}
 	
 	thisSequence = sequenceForID(parseInt(d3.select(this).attr("sequenceID")));
 
-
-
-
 	updateLinks(thisSequence);
-
-
-
 
    var children = [];   
 
@@ -742,70 +807,15 @@ function mouseover(d) {
   	.style("opacity",1.0);
 
 
-  //tracks.selectAll("circle").moveToFront();
-
-/*
-	var links = [];
-	sequences.forEach(function(d, i) {
-	    
-		
-	    d.children.forEach(function(c, j) {
-
-	    	var s = [],t=[];
-	        s.x = xScale(1 + d.start + d.duration/2);
-	        s.y = (d.track * trackHeight) + trackHeight/2;
-	  		
-	        child = sequenceForID(c[0]);
-	  		t.x = xScale(1 + child.start + child.duration/2);
-	  		t.y = (child.track * trackHeight) + trackHeight/2;
-
-       		links.push({"sourceID":d.ID,"points":[[s.x,s.y],[t.x,t.y]]});
-        });
-    }); */
-
-
-/*
-.attr("class", function(d) { return "link source-" + d.sourceID; })
-  tracks.selectAll(".link")
-      .style("opacity",0.2);
-
-  tracks.selectAll(".link.source-" + thisSequence.ID) */
-      
-
-
 }
 
 
-
-function loadRecording(id) {
-
-	$("#notes").html("");
-	sequences = [];
-	totalDuration = 0;
-
-	d3.json(webserviceHost + "recordings/" + id, function(error, data) {
-		recording = data[0];
-
-		$("#navbarTitle").text("");
-		for (var i=0;i<recording.tracks.length;i++) {
-
-			//$(".vis").html("");
-			//$(".vis").append('<g transform="translate(0,' + i * trackHeight + ')" id="track' + i + '"></g>');
-			loadTrack(recording.tracks[i].ID,i); 
-
-			$("#navbarTitle").text($("#navbarTitle").text() + recording.tracks[i].playerName + " (" + recording.tracks[i].playerInstrument + ")");
-
-			if (i<recording.tracks.length-1) {
-				$("#navbarTitle").text($("#navbarTitle").text() + ", "); 
-			}
-		}
-
-	 	tracks.attr("height", trackHeight*recording.tracks.length);  
-		nTracks = recording.tracks.length;
-
-  });
-
+function detailsViewClick() {
+	d3.event.stopPropagation();
+	console.log("detailsViewClick");
+	parameterLock = true;
 }
+
 
 function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
   var angleInRadians = (angleInDegrees-90) * Math.PI / 180.0;
@@ -854,7 +864,8 @@ var dInnerRadius = 10;
 var details = vis.append("g")
 	.attr("class","details")
 	.style("visibility", "visible")
-	.style("opacity", 0.0);
+	.style("opacity", 0.0)
+	.on("click",detailsViewClick);
 
 var detailsView = details.append("g");
 
@@ -875,6 +886,7 @@ detailsView.append("circle")
     .on("mouseleave",chartareaMouseleave);
 
 function clickPlay(d) {
+	console.log("play");
     document.getElementById("audioElement").play();
 }
 

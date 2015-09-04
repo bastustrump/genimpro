@@ -104,14 +104,13 @@ def plot(events):
 
 
 def analyseRecording(recordingID):
-	
-	recordingDetails = recordings.getRecordingDetails(recordingID)
-	print "Anaysing ID %i: %s on %s..." % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
-	
+    recordingDetails = recordings.getRecordingDetails(recordingID)
+    print "Anaysing ID %i: %s on %s..." % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
+
     for track in recordingDetails[4]:
         print track
         analyseTrack(track,updateAll=updateAll)
-    
+
     for track in recordingDetails[4]:
         print "Calculating Relations..."
         addRelations(track)
