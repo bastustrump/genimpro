@@ -89,9 +89,47 @@ body {
   fill: brown;
 }
 
+.phenotypeBar {
+  fill: DarkTurquoise;
+}
+
+.phenotypeBar:hover {
+  fill: brown;
+}
+
+
 .geneLine {
 	fill: none;
 	stroke-width: 1.5px;
+}
+
+h2 { 
+   position: absolute; 
+   top: 50px; 
+   left: 0; 
+   width: 100%; 
+   text-align: center;
+   font-size: 16pt;
+   color: white;
+   font-weight: 100;
+}
+
+.label {
+
+	font-weight: 100;
+
+}
+
+.parameterInfoClose {
+
+opacity: 0.5;
+font-weight: 100;
+font-size: 9pt;
+}
+
+
+.parameterInfoClose:hover {
+	opacity: 1;
 }
 
 </style>
@@ -157,6 +195,7 @@ body {
 
 <div>
 	<svg class="vis"></svg>
+	<h2><span class="label label-default" id="parameterInfo"></span></h3></h2>
 </div>
 
 
@@ -178,7 +217,7 @@ function localisedString(key) {
 	    case "SelectSession":
 	        switch (lang) {
 	        	case "de":
-	        		return "Bitte wählen Sie eine Session und ein Aufnahme aus.";
+	        		return "Bitte wählen Sie eine Session und eine Aufnahme aus.";
 	        	case "en":
 	        		return "Please select a session and a recording.";	        	
 	        }	        
@@ -214,6 +253,7 @@ if  (window.location.protocol=="file:") {
 
 }
 
+var alphabet = ['A','B','C','D','E','F','G','H','I','J','K'];
 
 var trackID=0;
 var samplerate = 48000;
@@ -259,6 +299,9 @@ fitnessScale[2].range[trackColors[2]];
 
 var genotypeScaleY = d3.scale.linear();
 var genotypeScaleX = d3.scale.ordinal();
+
+var phenotypeScaleY = d3.scale.linear();
+var phenotypeScaleX = d3.scale.ordinal();
 
 var clickedSequence = null;
 var parameterLock = false;
@@ -391,6 +434,22 @@ function loadRecording(id) {
 
 }
 
+function flattenPhenotypeData(phenotypeData) {
+
+	var flattenedPhenotypeData = {};
+
+	for(key in phenotypeData) { 
+		object = phenotypeData[key];
+
+		for (innerKey in object) {
+			flattenedPhenotypeData[key + " " + innerKey] = object[innerKey];
+		}
+
+	}
+	return flattenedPhenotypeData;
+
+}
+
 function loadTrack(id,trackNumber) {
 
 	d3.json(webserviceHost + "sequences/" + id, function(error, data) {
@@ -424,9 +483,9 @@ function loadTrack(id,trackNumber) {
 	    				value = value.replace("[]", "null");
 	    				sequence[sequenceParameters[p]] = JSON.parse(value);
 
-	    			
 	    		}
 	    	}
+	    	sequence["phenotype"] = flattenPhenotypeData(sequence["phenotype"]);
 	    	sequencesByTrack[trackNumber].push(sequence);
 	    	sequences.push(sequence);
 		}
@@ -479,12 +538,7 @@ function updateTracks() {
 	fitnessScale[2].domain([0,fitnessMax])
 	.range(trackColors[1]);
 
-	/*$.each(sequence, function( index, value ) {
 
-  		durations[index] = sequence[index]["duration"];
-	});*/
-
-	//tracks.on("mouseleave", mouseleave);
 	vis.on("click", clickVis);
 
 	var sequenceView = tracks.selectAll("g").data(sequences);
@@ -505,11 +559,7 @@ function updateTracks() {
 	    .attr("cx", function(d, i) { 
 	    	return xScale(sequences[i]["duration"]/2) ; })
 	    .attr("r", function(d, i) { return xScale(sequences[i]["duration"]/2) ; })
-	    //.attr("class",function(d, i) { return "track" + sequences[i]["track"] ; })
 	    .attr("fill", function(d, i) { return fitnessScale[sequences[i]["track"]](sequences[i]["fitness"]) ; })
-	    //.attr("sequenceID",function(d, i) { return sequences[i]["ID"]; } )
-	    //.on("click", clickSequence)
-	    //.on("mouseover", mouseover);
 
 	sequenceView.append("circle")
 		.attr("cy", function(d, i) { return xScale(sequences[i]["duration"]/2); })
@@ -537,6 +587,8 @@ function updateTracks() {
 	clickVis();
 }
 
+
+
 function clickSequence(d) {
 
 	d3.event.stopPropagation();
@@ -545,52 +597,150 @@ function clickSequence(d) {
     	.style("opacity", 1);
 
     clickedSequence = sequenceForID(parseInt(d3.select(this).attr("sequenceID")));
-    mouseleave();
+    sequenceMouseleave();
 
 	d3.select(".detailsView")
-	.transition().duration(200)
-	.style("fill",trackColors[clickedSequence["track"]][0]);
+		.transition().duration(200)
+		.style("fill",trackColors[clickedSequence["track"]][0]);
 
 	$.get( webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"), function( data ) {
-	  $( "#audioElement" ).html( data );
-	  $( "#audioElement" ).load();
-	})
+		  $( "#audioElement" ).html( data );
+		  $( "#audioElement" ).load();
+		})
 
 	genotypeScaleY.range([0,180]).domain([0,1]);
 	genotypeScaleX.rangeRoundBands([70, detailsViewSize-70],.1);
 
-	
+	phenotypeScaleY.range([0,180]).domain([0,100]);
+	phenotypeScaleX.rangeRoundBands([70, detailsViewSize-70],.1);	
 
-	genotypeData = clickedSequence["genotype"];
-	phenotypeData = clickedSequence["phenotype"];
+	drawPhenotypeChart(clickedSequence["phenotype"]);
+	drawGenotypeChart(clickedSequence["genotype"]);
+}
 
-  //genotypeScaleY.domain(data.map(function(d) { return d.letter; }));
+function drawPhenotypeChart(phenotypeData) {
+
+	var phenotypeKeys = Object.keys(phenotypeData);
+  	phenotypeScaleX.domain(d3.range(phenotypeKeys.length));
+
+    var phenotypeChartView = phenotypeChart.selectAll(".phenotypeBar")
+      .data(phenotypeKeys);
+
+    phenotypeChartView.enter().append("rect")
+    	.on("click",chartareaClick)
+    	.on("mouseover",phenotypeBarMouseover);
+
+    phenotypeChartView.attr("class", "phenotypeBar")
+      .transition().duration(100)
+      .attr("x", function(d,i) { return phenotypeScaleX(i); })
+      .attr("width", phenotypeScaleX.rangeBand())
+      .attr("y", function(d,i) { 
+      	return detailsViewSize/2 - 26 - phenotypeScaleY(phenotypeData[phenotypeKeys[i]]); })
+      .attr("height", function(d,i) { 
+      	return phenotypeScaleY(phenotypeData[phenotypeKeys[i]]); })
+      .attr("phenID", function(d,i) { return i; });
+
+    phenotypeChartView.exit().remove();
+
+}
+
+function drawGenotypeChart(genotypeData) {
+
   	genotypeScaleX.domain(d3.range(genotypeData.length));
-  //genotypeScaleX.domain([0, d3.max(data, function(d) { return d.frequency; })]);
 
     var genotypeChartView = genotypeChart.selectAll(".genotypeBar")
       .data(genotypeData);
 
-//console.log(genotypeData);
     genotypeChartView.enter().append("rect")
+    	.on("click",chartareaClick)
     	.on("mouseover",genotypeBarMouseover);
 
     genotypeChartView.attr("class", "genotypeBar")
       .transition().duration(100)
       .attr("x", function(d,i) { return genotypeScaleX(i); })
       .attr("width", genotypeScaleX.rangeBand())
-      .attr("y", detailsViewSize/2 + 30)
+      .attr("y", detailsViewSize/2 + 26)
       .attr("height", function(d,i) { return genotypeScaleY(d); })
       .attr("geneID", function(d,i) { return i; });
 
-      genotypeChartView.exit().remove();
+    genotypeChartView.exit().remove();
+
 
 }
 
+function parameterLabel(label) {
+
+	d3.select("#parameterInfo").html(label + "&nbsp;&nbsp;")
+	.append("span").attr("class","glyphicon glyphicon-remove parameterInfoClose")
+	.on("click",removeParameterLock);
+//<span class= aria-hidden="true"></span>
+}
+
+function removeParameterLock() {
+
+	d3.select("#parameterInfo").html("");
+	parameterLock = false;
+
+	sequenceMouseleave();
+	chartareaMouseleave();
+
+}
+
+function phenotypeBarMouseover(d) {
+	var phenID = parseInt(d3.select(this).attr("phenID"));
+	var phenValues= [];
+
+	var phenotypeKeys = Object.keys(clickedSequence["phenotype"]);
+
+	sequences.forEach(function(c, j) {
+		phenValues.push(c["phenotype"][phenotypeKeys[phenID]]);
+	});
+
+	tracksDataScale.domain([0,d3.max(phenValues)]);
+
+	var sequenceView = tracks.selectAll("g")
+	sequenceView
+		.transition().duration(250).ease('circle')
+		.attr("transform", function(d, i) { 
+			sequences[i]["x"] = (xScale(1 + sequences[i]["start"] + (sequences[i]["duration"]/2)) - xScale(sequences[i]["duration"]));
+			sequences[i]["y"] = (tracksDataScale(sequences[i]["phenotype"][phenotypeKeys[phenID]]) - xScale(sequences[i]["duration"]/2));
+			return "translate(" + sequences[i]["x"] + "," + sequences[i]["y"] + ")"; });
+
+
+	parameterLabel(phenotypeKeys[phenID]);
+
+	var geneLine = d3.svg.line()
+		.x(function(d,i) { return (xScale(1 + d["start"] + (d["duration"]/2)) - xScale(d["duration"]/2)) })
+		.y(function(d,i) { return tracksDataScale(d["phenotype"][phenotypeKeys[phenID]]) });
+
+
+	if (graphView.selectAll(".geneLine").empty()) {
+		
+			
+	}
+
+	graphView.selectAll(".geneLine")
+	.transition().duration(50)
+	.remove();
+
+	for	(index = 0; index < nTracks; index++) {
+		graphView.append("path")
+			.attr("class","geneLine")
+			.attr("stroke",trackColors[index][0])	
+			.datum(sequencesByTrack[index])
+			.transition().duration(500)
+			.attr("d",geneLine)
+			;
+	}
+
+	updateLinks(clickedSequence);
+
+
+}
+
+
 function genotypeBarMouseover(d) {
 	var geneID = parseInt(d3.select(this).attr("geneID"));
-	
-
 	var geneValues= [];
 
 	sequences.forEach(function(c, j) {
@@ -602,12 +752,13 @@ function genotypeBarMouseover(d) {
 	var sequenceView = tracks.selectAll("g")
 	sequenceView
 		.transition().duration(250).ease('circle')
-	.attr("transform", function(d, i) { 
-		sequences[i]["x"] = (xScale(1 + sequences[i]["start"] + (sequences[i]["duration"]/2)) - xScale(sequences[i]["duration"]));
-		sequences[i]["y"] = (tracksDataScale(sequences[i]["genotype"][geneID]) - xScale(sequences[i]["duration"]/2));
+		.attr("transform", function(d, i) { 
+			sequences[i]["x"] = (xScale(1 + sequences[i]["start"] + (sequences[i]["duration"]/2)) - xScale(sequences[i]["duration"]));
+			sequences[i]["y"] = (tracksDataScale(sequences[i]["genotype"][geneID]) - xScale(sequences[i]["duration"]/2));
+			return "translate(" + sequences[i]["x"] + "," + sequences[i]["y"] + ")"; });
 
-		return "translate(" + sequences[i]["x"] + "," + sequences[i]["y"] + ")"; });
 
+	parameterLabel("Gen " + alphabet[geneID]);
 
 	var geneLine = d3.svg.line()
 		.x(function(d,i) { return (xScale(1 + d["start"] + (d["duration"]/2)) - xScale(d["duration"]/2)) })
@@ -640,19 +791,25 @@ function genotypeBarMouseover(d) {
 
 }
 
+function chartareaClick(d) {
+	d3.event.stopPropagation();
+	parameterLock = true;
+
+}
 
 function chartareaMouseleave(d) {
 
-	if (parameterLock) {
+	if (parameterLock==true) {
 		return;
 	}
 
+	$("parameterInfo").html("");
 
 	var sequenceView = tracks.selectAll("g")
 
 	graphView.selectAll(".geneLine")
-	.transition().duration(10)
-	.remove();
+		.transition().duration(10)
+		.remove();
 
 	sequenceView
 		.transition().duration(200).ease('elastic')
@@ -669,10 +826,8 @@ function chartareaMouseleave(d) {
 
 function clickVis(d) {
 
-	console.log("clickVis");
-
 	clickedSequence = null;
-	mouseleave();
+	sequenceMouseleave();
 	
 	details.transition().duration(500)
     	.style("opacity", 0.0);	
@@ -681,7 +836,7 @@ function clickVis(d) {
 
 }
 
-function mouseleave(d) {
+function sequenceMouseleave(d) {
 
   if (clickedSequence == null) {
 
@@ -772,8 +927,8 @@ function updateLinks(sequence) {
 		.style("opacity",1.0);
 
 	path.exit()
-	.transition().duration(100)
-	.remove();
+		.transition().duration(100)
+		.remove();
 
 }
 
@@ -812,8 +967,7 @@ function mouseover(d) {
 
 function detailsViewClick() {
 	d3.event.stopPropagation();
-	console.log("detailsViewClick");
-	parameterLock = true;
+
 }
 
 
@@ -880,13 +1034,15 @@ detailsView.append("circle")
     .attr("d", describeArc(detailsViewSize/2, detailsViewSize/2, detailsRadius - dInnerRadius, 360-80,80))
     .on("mouseleave",chartareaMouseleave);
 
+
      detailsView.append("path")
     .attr("class", "detailsInnerCircle")
     .attr("d", describeArc(detailsViewSize/2, detailsViewSize/2, detailsRadius - dInnerRadius, 100,360-100))
     .on("mouseleave",chartareaMouseleave);
 
+
 function clickPlay(d) {
-	console.log("play");
+
     document.getElementById("audioElement").play();
 }
 
@@ -901,14 +1057,14 @@ function clickPause(d) {
     	.attr("xlink:href","play.svg")
     	.attr("class","playerButton")
     	.attr("x",detailsViewSize/2 - 40)
-    	.attr("y",0)
+    	.attr("y",3)
     	.on("click",clickPlay);
 
    playerControls.append("image")
     	.attr("xlink:href","pause.svg")
     	.attr("class","playerButton")
     	.attr("x",detailsViewSize/2 + 10)
-    	.attr("y",0)
+    	.attr("y",3)
     	.on("click",clickPause);
 
     var phenotypeChart = detailsView.append("g").attr("class","phenotypeChart");
