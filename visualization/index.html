@@ -659,8 +659,14 @@ function clickSequence(d) {
 	//console.log(webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"));
 
 	$.get( webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"), function( data ) {
-		  var object = $($.parseHTML(data));
-		  var element = object.filter('source');
+		  var element;	
+		  if (data.substring(0,6) == "<audio") {
+		  	element = data.substring(27,data.length - 8);
+		  } else {
+		  	element = data;
+		  }
+		  //var object = $($.parseHTML(data));
+		  //var element = object.filter('source');
 		  $( "#audioElement" ).html( element );
 		  $( "#audioElement" ).load();
 		  console.log(element);
