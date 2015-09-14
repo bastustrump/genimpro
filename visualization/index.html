@@ -656,6 +656,8 @@ function clickSequence(d) {
 		.transition().duration(200)
 		.style("fill",trackColors[clickedSequence["track"]][0]);
 
+	console.log(webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"));
+
 	$.get( webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"), function( data ) {
 		  $( "#audioElement" ).html( data );
 		  $( "#audioElement" ).load();
