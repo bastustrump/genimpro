@@ -18,6 +18,8 @@
       type="text/css">
 
 
+
+
 <style>
 
 body {
@@ -66,15 +68,29 @@ body {
 
 }
 
-.playerButton {
-  fill: white;
-  width: 20px;
-  height: 20px;
+#play {
+  fill: currentColor;
 }
 
-.playerButton:hover {
-  fill: steelblue;
+#pause {
+  fill: currentColor;
 }
+
+#playButton:hover {
+	color: SandyBrown;
+}
+
+#playButton{
+	color: white;
+}
+
+#pauseButton:hover {
+	color: SandyBrown;
+}
+#pauseButton {
+	color: white;
+}
+
 
 .alert {
    width:40%;    
@@ -133,6 +149,7 @@ font-size: 9pt;
 }
 
 </style>
+
 
 <body>
 
@@ -198,6 +215,12 @@ font-size: 9pt;
 	<h2><span class="label label-default" id="parameterInfo"></span></h3></h2>
 </div>
 
+<svg width="0" height="0">
+	<defs>
+    <path id="play" fill="#ffffff" d="M6 4l20 12-20 12z" class="play"></path>
+    <path id="pause" fill="#ffffff" d="M4 4h10v24h-10zM18 4h10v24h-10z" class="pause"></path>
+  </defs>
+</svg>
 
 <script>
 
@@ -283,6 +306,8 @@ var similarityLinkScale = d3.scale.linear()
 	.range([0.1,2.0]);
 
 var fitnessScale = [];
+
+var phenotypeMaxima = [];
 
 var tracksDataScale = d3.scale.linear();
 
@@ -406,6 +431,8 @@ function loadSession(id) {
 
 }
 
+
+
 function loadRecording(id) {
 
 	$("#notes").html("");
@@ -431,6 +458,30 @@ function loadRecording(id) {
 		nTracks = recording.tracks.length;
 
   });
+
+}
+
+function getPhenotypeMaxima() {
+
+	var phenotypeKeys = [];
+	var phenotypeValues = [];
+
+	for(key in sequences[0]["phenotype"]) {
+		phenotypeKeys.push(key);
+		phenotypeValues[key] = [];
+	} 
+
+	for (var i=0;i<sequences.length;i++) { 
+
+		for (var k=0;k<phenotypeKeys.length;k++) {
+			phenotypeValues[phenotypeKeys[k]].push(sequences[i]["phenotype"][phenotypeKeys[k]]);
+		}
+	}
+
+	for(key in phenotypeValues) {
+		phenotypeMaxima[key] = (d3.max(phenotypeValues[key]));
+	} 	
+	console.log(phenotypeMaxima);
 
 }
 
@@ -525,6 +576,8 @@ function updateTracks() {
 			fitnessMax = sequences[i]["fitness"];
 		}		
 	}
+
+	getPhenotypeMaxima();
 
 	durations = [];
 
@@ -1046,25 +1099,38 @@ function clickPlay(d) {
     document.getElementById("audioElement").play();
 }
 
+function playerHover(d) {
+
+	console.log(d3.selectAll(".play"));
+	d3.selectAll("#play").attr("fill","steelblue");
+
+}
+
 function clickPause(d) {
     document.getElementById("audioElement").pause();
 }
 
   var playerControls = detailsView.append("g")
- 	.attr("transform","translate(0," + (detailsViewSize/2 - 15) + ")");
+ 	.attr("transform","translate(" + (detailsViewSize/2 - 25) + "," + (detailsViewSize/2 - 15) + ")");
 
-   playerControls.append("image")
-    	.attr("xlink:href","play.svg")
-    	.attr("class","playerButton")
-    	.attr("x",detailsViewSize/2 - 40)
+   playerControls.append("use")
+    	.attr("xlink:href","#play")
+    	.attr("transform","scale(0.8)")
+    	.attr("id","playButton")
+    	.attr("x",0)
     	.attr("y",3)
+    	.attr("height",32)
+    	//.on("mouseover",playerHover)
     	.on("click",clickPlay);
 
-   playerControls.append("image")
-    	.attr("xlink:href","pause.svg")
-    	.attr("class","playerButton")
-    	.attr("x",detailsViewSize/2 + 10)
+   playerControls.append("use")
+    	.attr("xlink:href","#pause")
+    	.attr("id","pauseButton")
+    	.attr("transform","scale(0.8)")
+    	.attr("x",35)
     	.attr("y",3)
+    	.attr("height",32)
+    	//.on("mouseover",playerHover)
     	.on("click",clickPause);
 
     var phenotypeChart = detailsView.append("g").attr("class","phenotypeChart");
