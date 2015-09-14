@@ -656,11 +656,14 @@ function clickSequence(d) {
 		.transition().duration(200)
 		.style("fill",trackColors[clickedSequence["track"]][0]);
 
-	console.log(webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"));
+	//console.log(webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"));
 
 	$.get( webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"), function( data ) {
-		  $( "#audioElement" ).html( data );
+		  var object = $($.parseHTML(data));
+		  var element = object.filter('source');
+		  $( "#audioElement" ).html( element );
 		  $( "#audioElement" ).load();
+		  //console.log(element)
 		})
 
 	genotypeScaleY.range([0,180]).domain([0,1]);
