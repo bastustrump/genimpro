@@ -106,8 +106,8 @@ def updateSequencesForTrack(track,sequences,sonicevents):
     db.commit()
     
     for sequence in sequences:
-        start = sonicevents[sequence[0]]["start"]
-        end = sonicevents[sequence[-1]]["end"]
+        start = sequence[0] #sonicevents[sequence[0]]["start"]
+        end = sequence[1] #sonicevents[sequence[-1]]["end"]
         events = json.dumps(sequence)
         sqlcommand = "INSERT INTO sequences (trackID,start,end,events) values (%i,%i,%i,%s)" % (track[3],start,end,repr(events))
         c.execute(sqlcommand)
