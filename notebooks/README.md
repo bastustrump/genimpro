@@ -1,4 +1,8 @@
-##Analysis Methods
+##Analysis Methodology
+
+1. [Alternative Grouping Method (based on continuous data)](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/alternative%20grouping.ipynb)
+
+<hr>
 
 1. [Onset Detection & Feature Extraction](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/feature%20extraction.ipynb)
 2. [Some feature vectors compared](http://nbviewer.ipython.org/github/bastustrump/genimpro/blob/master/notebooks/compare%20feature%20plots.ipynb)
