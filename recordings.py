@@ -37,11 +37,16 @@ def getRecordingDetails(recordingID,printDetails=0):
 	return values
 
 def getAudioForTrack(track):
-	loader = essentia.standard.AudioLoader(filename=track[2])
-	audio,samplerate,x,x,x,x = loader()
-	mono_audio = np.asarray([audio[i][0] for i in range(0,len(audio)-1)])
-	mono_audio = mono_audio  * 4.0 #normalize
-	return mono_audio
+	#loader = essentia.standard.AudioLoader(filename=track[2])
+	#audio,samplerate,x,x,x,x = loader()
+	#mono_audio = np.asarray([audio[i][0] for i in range(0,len(audio)-1)])
+	
+    monoLoader = essentia.standard.MonoLoader(filename=track[2])
+
+    mono_audio = monoLoader()
+    mono_audio = mono_audio  * 4.0 #normalize
+
+    return mono_audio
 	
 def listRecodings(sessionID=None,webservice=0):
     if sessionID is not None:
@@ -99,6 +104,23 @@ def updateSoniceventsForTrack(track,sonicevents):
     
     print "Updated %i sonicevents for track %i" % (len(sonicevents),track[3])
 
+
+def updateCellsForTrack(track,cells):
+    #clear sequences for track
+    sqlcommand = "DELETE FROM sequences where trackID=%i" % (track[3])
+    c.execute(sqlcommand)
+    db.commit()
+    
+    for cell in cells:
+        start = cell[0] #sonicevents[sequence[0]]["start"]
+        end = cell[1] #sonicevents[sequence[-1]]["end"]
+        events = json.dumps(cell)
+        sqlcommand = "INSERT INTO sequences (trackID,start,end,events) values (%i,%i,%i,%s)" % (track[3],start,end,repr(events))
+        c.execute(sqlcommand)
+        db.commit()
+        
+    print "Added %i cells for track %i" % (len(cells),track[3])
+
 def updateSequencesForTrack(track,sequences,sonicevents):
     #clear sequences for track
     sqlcommand = "DELETE FROM sequences where trackID=%i" % (track[3])
@@ -108,7 +130,7 @@ def updateSequencesForTrack(track,sequences,sonicevents):
     for sequence in sequences:
         start = sequence[0] #sonicevents[sequence[0]]["start"]
         end = sequence[1] #sonicevents[sequence[-1]]["end"]
-        events = json.dumps(sequence)
+        events = [] #json.dumps(sequence)
         sqlcommand = "INSERT INTO sequences (trackID,start,end,events) values (%i,%i,%i,%s)" % (track[3],start,end,repr(events))
         c.execute(sqlcommand)
         db.commit()
@@ -128,10 +150,10 @@ def updatePhenotypesForTrack(track,sequences,phenotypes):
     print "Updated %i phenotypes for track %i" % (len(phenotypes),track[3])
 
 
-def updateGenotypesForTrack(track,sequences,genotypes):
+def updateGenotypesForTrack(track,cellBoundaries,genotypes):
     
-    for i in range(0,len(sequences)):
-        events = json.dumps(sequences[i])
+    for i in range(0,len(cellBoundaries)):
+        events = json.dumps(cellBoundaries[i])
         genotype = json.dumps(genotypes[i].tolist())
         sqlcommand = "UPDATE sequences SET genotype=%s where trackID=%i AND events=%s" % (repr(genotype),track[3],repr(events))
         c.execute(sqlcommand)
@@ -253,8 +275,8 @@ def prepareDataForRelations(trackID):
     
     return (genotypes,sequenceData)
 
-def getGenome():
-    sqlcommand = "SELECT CNTR FROM genome order by ID desc LIMIT 1"
+def getGenome(sessionID):
+    sqlcommand = "SELECT CNTR FROM genome where sessionID=%i order by ID desc LIMIT 1 " % (sessionID)
     c.execute(sqlcommand)
     data = c.fetchone()
 
