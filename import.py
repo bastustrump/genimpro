@@ -75,19 +75,19 @@ def importAudio(audiofile,sessionID):
 
 if __name__ == '__main__':
 	
-	c.execute("select id,name,instrument from players")
-	players = c.fetchall()
+    c.execute("select id,name,instrument from players")
+    players = c.fetchall()
 
-	pp.pprint(players)
+    pp.pprint(players)
 
-	sessionID = int(sys.argv[1])
-	files = sys.argv[2:]
+    sessionID = int(sys.argv[1])
+    files = sys.argv[2:]
 
-	print "Importing Session " + str(sessionID) + "..."
+    print "Importing Session " + str(sessionID) + "..."
 
-	print files
-	for audiofile in files:
-		importAudio(audiofile,sessionID)
+    print files
+    for audiofile in files:
+    	importAudio(audiofile,sessionID)
 
     genimpro.analyseSession(sessionID)
 

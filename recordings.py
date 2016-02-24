@@ -7,12 +7,12 @@ db = lite.connect('genImpro.db')
 c = db.cursor() 
 
 def getRecordingDetails(recordingID,printDetails=0):
-	c.execute("select ID,sessionID,key from recordings where ID=%i" % (recordingID))
+	c.execute("select ID,sessionID,key,date from recordings where ID=%i" % (recordingID))
 	values = c.fetchone()
 	if values==None:
 		raise Exception("No valid ID")
 		
-	(recordingID,sessionID,key) = values
+	(recordingID,sessionID,key,date) = values
 
 	if printDetails:
 		print "%i (%s):" % (recordingID,key)	
@@ -24,19 +24,19 @@ def getRecordingDetails(recordingID,printDetails=0):
 
 	for track in values:
 		(playerID,audiofile,trackID) = track
-		c.execute("select name,instrument from players where ID="+str(playerID))
+		c.execute("select name,instrument,t_silence,minGapSize from players where ID="+str(playerID))
 		track = c.fetchone()
-		tracks.append([track[0],track[1],audiofile,trackID,recordingID])
+		tracks.append([track[0],track[1],audiofile,trackID,recordingID,playerID,track[2],track[3]])
 
 		if printDetails:
 			print "    %s (%s): %s" % (track[0],track[1],audiofile)
 
 	c.execute("select date,key from sessions where ID="+str(sessionID))
 	session = c.fetchone()
-	values = [recordingID,session[1],session[0],sessionID,tracks]
+	values = [recordingID,session[1],session[0],sessionID,tracks,key,date]
 	return values
 
-def getAudioForTrack(track):
+def getAudioForTrack(track,normalize=4):
 	#loader = essentia.standard.AudioLoader(filename=track[2])
 	#audio,samplerate,x,x,x,x = loader()
 	#mono_audio = np.asarray([audio[i][0] for i in range(0,len(audio)-1)])
@@ -44,11 +44,12 @@ def getAudioForTrack(track):
     monoLoader = essentia.standard.MonoLoader(filename=track[2])
 
     mono_audio = monoLoader()
-    mono_audio = mono_audio  * 4.0 #normalize
+    mono_audio = mono_audio  * normalize #normalize
 
     return mono_audio
+
 	
-def listRecodings(sessionID=None,webservice=0):
+def listRecodings(sessionID=None,webservice=0,printDetails=0):
     if sessionID is not None:
         sqlQuery = "select ID from recordings where sessionID=" + str(sessionID)
     else:
@@ -63,13 +64,13 @@ def listRecodings(sessionID=None,webservice=0):
     for recordingID in values:
     	recordingDetails = getRecordingDetails(recordingID)
     	
-    	if not webservice:
+    	if printDetails & (not webservice):
     		print "ID %i: %s on %s:" % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
     	
     	IDs.append(recordingDetails[0])
     	recordings.append(recordingDetails)
 
-    	if not webservice:
+    	if printDetails & (not webservice):
     		for track in recordingDetails[4]:
     			print "    %s (%s): %s" % (track[0],track[1],track[2])
 

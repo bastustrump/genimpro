@@ -276,10 +276,10 @@ if  (window.location.protocol=="file:") {
 
 }
 
-var alphabet = ['A','B','C','D','E','F','G','H','I','J','K'];
+var alphabet = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
 
 var trackID=0;
-var samplerate = 48000;
+var samplerate = 44100;
 
 var links = [];
 
@@ -621,10 +621,10 @@ function updateTracks() {
 	    .attr("r", function(d, i) { 
 	    	var radius = xScale(sequences[i]["duration"]/2);
 
-	    	if (radius > 2.0) {
+	    	if (radius > 5) {
 	    		return radius -2;
 	    	} else {
-	    	return  0.5 ; }
+	    	return  5 ; }
 	    	})
 	    //.attr("class",function(d, i) { return "track" + sequences[i]["track"] ; })
 	    .attr("fill", function(d, i) { return trackColors[sequences[i]["track"]][0] ; })
@@ -657,7 +657,7 @@ function clickSequence(d) {
 		.style("fill",trackColors[clickedSequence["track"]][0]);
 
 	//console.log(webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"));
-
+	console.log(webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"));
 	$.get( webserviceHost + "sequenceAudio/" + d3.select(this).attr("sequenceID"), function( data ) {
 		  var element;	
 		  if (data.substring(0,6) == "<audio") {
@@ -669,7 +669,7 @@ function clickSequence(d) {
 		  //var element = object.filter('source');
 		  $( "#audioElement" ).html( element );
 		  $( "#audioElement" ).load();
-		  console.log(element);
+		  
 		})
 
 	genotypeScaleY.range([0,180]).domain([0,1]);
@@ -1106,7 +1106,7 @@ detailsView.append("circle")
 
 
 function clickPlay(d) {
-
+	console.log("play");
     document.getElementById("audioElement").play();
 }
 

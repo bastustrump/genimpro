@@ -24,6 +24,7 @@ urls = ("/recordings", "list_recordings",
     '/recordings/(.*)', 'get_recording',
     '/sequences/(.*)', 'sequences',
     '/sequenceAudio/(.*)', 'sequenceAudio',
+    '/testAudio/(.*)', 'testAudio',
     '/sessions', 'list_sessions',
     '/sessions/(.*)', 'get_session'
     )
@@ -58,7 +59,7 @@ def getRecording(row):
     return recording
 
 
-def mp3slice(filename,start,end,samplerate=48000):
+def mp3slice(filename,start,end,samplerate=44100.0):
     if os.path.splitext(filename)[1]==".mp3":
         audio = pydub.AudioSegment.from_mp3(filename)
     elif os.path.splitext(filename)[1]==".aiff":
@@ -73,15 +74,14 @@ def mp3slice(filename,start,end,samplerate=48000):
 
     one_second_silence = pydub.AudioSegment.silent(duration=500)
     
-    audioslice=one_second_silence + audio[start/samplerate*1000:end/samplerate*1000]
-    
+    audioslice=one_second_silence + audio[(start/samplerate)*1000:(end/samplerate)*1000]
+    print (start/samplerate)*1000
+    print (end/samplerate)*1000
     mp3audio = audioslice.export(cStringIO.StringIO(), format='mp3')
     mp3audio.reset()
     mp3audio = mp3audio.read()
     
-    src = """
-      <source controls src="data:audio/mpeg;base64,{base64}" type="audio/mpeg" />
-    """.format(base64=base64.encodestring(mp3audio))
+    src = '<source controls src="data:audio/mpeg;base64,{base64}" type="audio/mpeg" />'.format(base64=base64.encodestring(mp3audio))
     
     return src
 
@@ -148,6 +148,24 @@ class sequenceAudio:
 
         return mp3slice(filename,start,end)
 
+class testAudio:
+    def GET(self,ID):
+        sequenceQuery = db.select('sequences',where="ID=%i" % (int(ID)))
+        row = sequenceQuery[0]
+        trackID = row["trackID"]
+        start =row["start"]
+        end =row["end"]
+        filenameQuery = db.select('tracks',where="ID=%i" % (trackID))
+
+        filename = filenameQuery[0]["audiofile"]
+
+        return """
+    <body>
+    <audio controls="controls" style="width:600px" >
+      {audio}
+    </audio>
+    </body>
+    """.format(audio=mp3slice(filename,start,end))
 
 app = web.application(urls, globals())
 

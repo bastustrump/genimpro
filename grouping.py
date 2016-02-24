@@ -3,10 +3,14 @@ import numpy as np
 import operator
 import math
 
+samplerate=44100.0
+
 from scipy.signal import argrelmax 
 from essentia.standard import *
 
-def silenceGaps(frames):
+def silenceGaps(frames,order=20):
+    
+    from scipy.signal import argrelmax 
 
     consecutiveNumbers = [0]
     for i in range(0,len(frames)-2):
@@ -26,7 +30,8 @@ def silenceGaps(frames):
         consecutiveNumbers.append(counter)
     
     featureArray = np.asarray(consecutiveNumbers)
-    maxima = argrelmax(featureArray, order=25)
+    
+    maxima = argrelmax(featureArray, order=order)
     featureMaxima = maxima[0] -1
     
     silenceGaps = []
@@ -36,7 +41,7 @@ def silenceGaps(frames):
     
     return silenceGaps
 
-def groupBySilence(audio,hopSize=4*1024,t_silence=0.05,plot=0):
+def groupBySilence(audio,hopSize=1024,t_silence=0.04,plot=0,order=50,minGapSize=10):
     
     timestamps = len(audio)
     
@@ -50,35 +55,28 @@ def groupBySilence(audio,hopSize=4*1024,t_silence=0.05,plot=0):
             silenceFrames.append(0)
         else:
             silenceFrames.append(1)
-      
-    gaps = silenceGaps(silenceFrames)
+
+    gaps = silenceGaps(silenceFrames,int(len(audio)/samplerate/4))
     
     gapFrames = []
     
     for gap in gaps:
-        gapFrames.extend(range(gap[0],gap[1]+1))
+        if (gap[1]-gap[0])>minGapSize:#10
+            gapFrames.extend(range(gap[0],gap[1]))
+    
     
     audioFrames = range(0,len(audio)/hopSize)
     groupFrames = [x for x in audioFrames if x not in gapFrames]
+
     
     from numpy import array, diff, where, split
-    result= split(groupFrames, where(diff(groupFrames)>1)[0]+1)
+    result= split(groupFrames, where(diff(groupFrames)>2)[0]+1)
     splitGroupFrames =  map(list, result)
     
     groups = []
     
     for group in splitGroupFrames:
-        groups.append([group[0]*hopSize,((group[-1]+1)*hopSize) - 1])
-        
-    if plot:
-        plt.figure(figsize=(16, 10))
-        plt.plot(audio,'0.5',label="Audio Waveform",linewidth=0.7)
-        for gap in gaps:
-            plt.axvspan(gap[0]*hopSize,(gap[1]+1)*hopSize-1, color='r', alpha=0.3)
-            
-        for group in groups:
-            plt.axvspan(group[0],group[1], color='g', alpha=0.3)
-            
-        wavPlayer(audio,samplerate)
+        if len(group) > 4:
+            groups.append([group[0]*hopSize,((group[-1]+1)*hopSize)])
         
     return groups

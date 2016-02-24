@@ -30,69 +30,6 @@ def soniceventsForTrack(track):
 
 
 
-def analysePhenotypes(track):
-
-    audio = recordings.getAudioForTrack(track)
-    cellBoundaries = grouping.groupBySilence(audio)
-    recordings.updateCellsForTrack(track,cellBoundaries)
-
-    phenotypes = phenotypesForCells(cellBoundaries,audio)
-    recordings.updatePhenotypesForTrack(track,cellBoundaries,phenotypes)
-
-
-
-def analyseTrack(track,updateAll=0):
-    
-    audio = recordings.getAudioForTrack(track)
-    #sonicevents = recordings.getSoniceventsForTrack(track)
-    sequences = recordings.getSequencesForTrack(track)
-    phenotypes = recordings.getPhenotypesForTrack(track)
-    genotypes = recordings.getGenotypesForTrack(track)
-    
-    if (sonicevents==None) | updateAll:
-        #sonicevents = soniceventsForTrack(track)
-        #recordings.updateSoniceventsForTrack(track,sonicevents)
-        
-        cellBoundaries = grouping.groupBySilence(audio)
-        recordings.updateCellsForTrack(track,cellBoundaries)
-
-        phenotypes = phenotypesForCells(cellBoundaries,audio)
-        recordings.updatePhenotypesForTrack(track,cellBoundaries,phenotypes)
-
-        genotypes = genotypesForSequences(cellBoundaries)
-        recordings.updateGenotypesForTrack(track,cellBoundaries,genotypes)
-
-        return 
-        
-    if (sequences==None) | updateAll:
-        sequences = grouping.sequencesForSonicevents(sonicevents)
-        recordings.updateSequencesForTrack(track,sequences,sonicevents)
-    
-        phenotypes = phenotypesForSequences(sequences,sonicevents,audio)
-        recordings.updatePhenotypesForTrack(track,sequences,phenotypes)
-
-        genotypes = genotypesForSequences(sequences)
-        recordings.updateGenotypesForTrack(track,sequences,genotypes)
-        
-        return 
-        
-    if (phenotypes==None) | updateAll:
-        phenotypes = phenotypesForSequences(sequences,sonicevents,audio)
-        recordings.updatePhenotypesForTrack(track,sequences,phenotypes)   
-
-        genotypes = genotypesForSequences(phenotypes)
-        recordings.updateGenotypesForTrack(track,sequences,genotypes)
-
-
-    if (genotypes==None) | updateAll: 
-
-        genotypes = genotypesForSequences(phenotypes)
-        recordings.updateGenotypesForTrack(track,sequences,genotypes)        
-        
-        return 
-
-
-
 def eventPlot(event,filename):
 	plt.figure()
 	t = np.linspace(0, len(event["audio"])/samplerate, num=len(event["audio"]))
@@ -103,35 +40,58 @@ def eventPlot(event,filename):
 	#plt.show()
 	plt.savefig(filename,dpi=600)
 	
-def plot(events):	
-	
-	fig, ax = plt.subplots()
-	
-	durations = [(events[i]["end"] - events[i]["start"])/float(samplerate) for i in range(len(events))]
-	ax.bar(range(len(events)),durations)
+def analyseSession(sessionID):
+    recordingIDs = recordings.listRecodings(sessionID)
 
-	#[(events[i]["end"] for i in range(len(events))]
-	#ax.hist(durations, 20, normed=0, histtype='stepfilled', facecolor='g', alpha=0.75)
-	plt.show()
+    for recordingID in recordingIDs:
+        analyseRecording(recordingID,sessionID)
+        
+    genomeForSession(sessionID)
+    
+    for recordingID in recordingIDs:
+        analyseGenetics(recordingID,sessionID)
 
+def analyseGenetics(recordingID,sessionID,updateAll=0):
 
-
-def analyseRecording(recordingID):
-    recordingDetails = recordings.getRecordingDetails(recordingID)
-    print "Anaysing ID %i: %s on %s..." % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
-
+    recordingDetails = genimpro.recordings.getRecordingDetails(recordingID)
+    
     for track in recordingDetails[4]:
-        print track
-        analysePhenotypes(track,updateAll=updateAll)
-
+        analyseGenotypes(track,sessionID)
+    
     for track in recordingDetails[4]:
-        print "Calculating Relations..."
         addRelations(track)
 
-def analyseSession(sessionID):
-    recordings = genimpro.recordings.listRecodings(sessionID)
-    for recordingID in recordings:
-        analyseRecording(recordingID)
+def analysePhenotypes(track):
+
+    audio = recordings.getAudioForTrack(track)
+    cellBoundaries = grouping.groupBySilence(audio)
+    recordings.updateCellsForTrack(track,cellBoundaries)
+
+    phenotypes = phenotypesForCells(cellBoundaries,audio)
+    recordings.updatePhenotypesForTrack(track,cellBoundaries,phenotypes)
+
+def analyseGenotypes(track,sessionID):
+    cellBoundaries = recordings.getSequencesForTrack(track)
+    phenotypes = recordings.getPhenotypesForTrack(track)
+    genotypes = genotypesForCells(phenotypes,sessionID)
+    recordings.updateGenotypesForTrack(track,cellBoundaries,genotypes)
+
+def addRelations(track):
+    (genotypes,sequenceData) = recordings.prepareDataForRelations(track[3])
+    sequences = recordings.getSequencesForTrack(track)
+    relations = calculateRelationsForGenotypes(genotypes,sequenceData)
+    relations = relations[0:len(sequences)]
+    recordings.updateRelationsForTrack(track,sequences,relations)
+
+def analyseRecording(recordingID,sessionID,updateAll=0):
+
+    recordingDetails = recordings.getRecordingDetails(recordingID)
+    print "Analysing ID %i: %s on %s:" % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
+
+    for track in recordingDetails[4]:
+        analysePhenotypes(track)
+
+
 			
 def isEven(number):
         return number % 2 == 0
@@ -401,6 +361,51 @@ def calculateRelationsForGenotypes(genotypes,sequenceData,t_fitness=0.2,n_relati
         relations.append(relation)
     
     return relations
+
+def genomeForSession(sessionID):
+    
+    allPhenotypesDicts = []
+    
+    for recordingID in recordings.listRecodings(sessionID):
+        recordingDetails = recordings.getRecordingDetails(recordingID)
+    
+    for track in recordingDetails[4]:
+        phenotypes = recordings.getPhenotypesForTrack(track)
+        if type(phenotypes) is list:
+            allPhenotypesDicts.extend(phenotypes)
+            
+    phenotypeArray = []
+    
+    for phenotypeDict in allPhenotypesDicts:
+        phenotypeArray.append(flatten(phenotypeDict.values()))
+    allPhenotypesVect = np.asarray(phenotypeArray)
+    
+    where_are_NaNs = np.isnan(allPhenotypesVect)
+    allPhenotypesVect[where_are_NaNs] = 0
+
+    dataByDimension = []
+
+    for dimension in range(0,len(allPhenotypesVect[0]-1)):
+        dataByDimension.append([allPhenotypesVect[i][dimension] for i in range(0,len(allPhenotypesVect)-1)])
+
+    alldata = np.vstack((dataByDimension))
+        
+    cntr, u_orig, d, _, _, p, fpc = fuzz.cluster.cmeans(alldata, 15, 2, error=0.005, maxiter=1000)
+    [u_orig[i][0] for i in range(len(d))]
+    
+    import sqlite3 as lite
+    import json
+
+    db = lite.connect('genImpro.db')
+    c = db.cursor()
+
+    genome = json.dumps(cntr.tolist())
+
+    sqlcommand = "INSERT INTO genome (CNTR,sessionID) values (%s,%i)" % (repr(genome),sessionID)
+    c.execute(sqlcommand)
+    db.commit()
+
+    print "Updated Genome for session %i" % (sessionID)
 
 
 if __name__ == '__main__':
