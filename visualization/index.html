@@ -148,6 +148,12 @@ font-size: 9pt;
 	opacity: 1;
 }
 
+.dropdown-menu {
+
+	font-size: 11px;
+
+}
+
 </style>
 
 
@@ -536,7 +542,8 @@ function loadTrack(id,trackNumber) {
 
 	    		}
 	    	}
-	    	sequence["phenotype"] = flattenPhenotypeData(sequence["phenotype"]);
+	    	//sequence["phenotype"] = flattenPhenotypeData(sequence["phenotype"]);
+	    	sequence["phenotype"] = sequence["phenotype"];
 	    	sequencesByTrack[trackNumber].push(sequence);
 	    	sequences.push(sequence);
 		}
@@ -675,7 +682,7 @@ function clickSequence(d) {
 	genotypeScaleY.range([0,180]).domain([0,1]);
 	genotypeScaleX.rangeRoundBands([70, detailsViewSize-70],.1);
 
-	phenotypeScaleY.range([0,180]).domain([0,100]);
+	phenotypeScaleY.range([0,200]).domain([0,2]);
 	phenotypeScaleX.rangeRoundBands([70, detailsViewSize-70],.1);	
 
 	drawPhenotypeChart(clickedSequence["phenotype"]);
@@ -684,7 +691,8 @@ function clickSequence(d) {
 
 function drawPhenotypeChart(phenotypeData) {
 
-	var phenotypeKeys = Object.keys(phenotypeData);
+	var phenotypeKeys = Object.keys(phenotypeData).sort();
+	
   	phenotypeScaleX.domain(d3.range(phenotypeKeys.length));
 
     var phenotypeChartView = phenotypeChart.selectAll(".phenotypeBar")
@@ -754,7 +762,7 @@ function phenotypeBarMouseover(d) {
 	var phenID = parseInt(d3.select(this).attr("phenID"));
 	var phenValues= [];
 
-	var phenotypeKeys = Object.keys(clickedSequence["phenotype"]);
+	var phenotypeKeys = Object.keys(clickedSequence["phenotype"]).sort();
 
 	sequences.forEach(function(c, j) {
 		phenValues.push(c["phenotype"][phenotypeKeys[phenID]]);

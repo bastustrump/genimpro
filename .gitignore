@@ -12,6 +12,8 @@ notebooks/.ipynb_checkpoints
 *.sv
 
 test.py
+*.png
+*.aiff
 
 *.pyc
 

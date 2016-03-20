@@ -1,7 +1,8 @@
 import sqlite3 as lite
 from essentia.standard import *
 import numpy as np
-import json
+import simplejson as json
+
 
 db = lite.connect('genImpro.db')
 c = db.cursor() 
@@ -237,6 +238,37 @@ def getSequencesForTrack(track):
         
     return sequences
 
+import exceptions
+
+def is_json(myjson):
+    try:
+        json_object = json.loads(myjson)
+    except ValueError, e:
+        return False
+    return True
+
+def getCellsForTrack(track):
+    sqlcommand = "SELECT * FROM sequences where trackID=%i" % (track[3])
+    c.execute(sqlcommand)
+    data = c.fetchall()
+
+    if data is None:
+        return None
+
+    cells = []
+    
+    for cell in data:
+        cellObject = []
+        print cell
+        for cellElement in list(cell):
+            if is_json(cellElement):
+                cellObject.append(json.loads(cellElement))
+            else:
+                cellObject.append(cellElement)
+        cells.append(cellObject)
+        
+    return cells  
+
 def getRecordingIDforTrack(trackID):
     sqlcommand = "SELECT recordingID FROM tracks where ID=%i" % (trackID)
     c.execute(sqlcommand)
@@ -271,8 +303,10 @@ def prepareDataForRelations(trackID):
     sequenceData = []
     
     for track in recordingTracks:
-        genotypes.extend(getGenotypesForTrack(track))
-        sequenceData.extend(getSequenceIDsForTrack(track))
+        trackGenotypes = getGenotypesForTrack(track)
+        if type(trackGenotypes) <> type(None):
+            genotypes.extend(trackGenotypes)
+            sequenceData.extend(getSequenceIDsForTrack(track))
     
     return (genotypes,sequenceData)
 

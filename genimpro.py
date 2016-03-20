@@ -73,15 +73,17 @@ def analysePhenotypes(track):
 def analyseGenotypes(track,sessionID):
     cellBoundaries = recordings.getSequencesForTrack(track)
     phenotypes = recordings.getPhenotypesForTrack(track)
-    genotypes = genotypesForCells(phenotypes,sessionID)
-    recordings.updateGenotypesForTrack(track,cellBoundaries,genotypes)
+    if type(phenotypes) <> type(None):
+        genotypes = genotypesForCells(phenotypes,sessionID)
+        recordings.updateGenotypesForTrack(track,cellBoundaries,genotypes)
 
 def addRelations(track):
     (genotypes,sequenceData) = recordings.prepareDataForRelations(track[3])
     sequences = recordings.getSequencesForTrack(track)
-    relations = calculateRelationsForGenotypes(genotypes,sequenceData)
-    relations = relations[0:len(sequences)]
-    recordings.updateRelationsForTrack(track,sequences,relations)
+    if type(genotypes) <> type(None):
+        relations = calculateRelationsForGenotypes(genotypes,sequenceData)
+        relations = relations[0:len(sequences)]
+        recordings.updateRelationsForTrack(track,sequences,relations)
 
 def analyseRecording(recordingID,sessionID,updateAll=0):
 
@@ -228,46 +230,54 @@ def phenotypeForCell(cellAudio):
     
     eff_duration = effectiveDuration(cellAudio)
  
-    featurelist = ["ZCR","SpectralCentroid","SpectralComplexity","SpectralRolloff","Roughness"]
+    featurelist = ["ZCR","SpectralCentroid","SpectralComplexity","Roughness","Loudness"]
     features = {}
     
     for feature in featurelist:
         features[feature] = {}
         features[feature]["raw"]=[0]
     
-    features["Chroma"] = chroma.tolist()
-    features["DynamicComplexity"] = list(DynamicComplexity(cellAudio))
+    chromaKeys = ["A","A#","B","C","C#","D","D#","E","F","F#","G","G#"]
+    
+    for i,key in enumerate(chroma.tolist()):
+        features["Chroma " + chromaKeys[i]] = key
+        
+    features["DynamicComplexity"] = list(DynamicComplexity(cellAudio))[0]/25
     #features["SpectralCentroidA"]= centroid(spectrum)
     #features["SpectralRolloffA"] = SpectralRolloff(spectrum)
     ###features["SpectralFluxA"] = SpectralFlux(spectrum)
     #features["SpectralComplexityA"] = SpectralComplexity(spectrum)
     #features["RoughnessA"] = Dissonance(peaks[0],peaks[1])
-    features["Rhythm"] = RhythmExtractor(cellAudio)[0]
+    features["Rhythm"] = RhythmExtractor(cellAudio)[0]/200
     #features["ZCRA"] = zerocrossingrate(cellAudio)
     features["Density"] = eff_duration * samplerate / len(cellAudio)
     
     
     for featureframe in FrameGenerator(cellAudio, frameSize = hop_s, hopSize = hop_s/2):
-        #features["Loudness"]["raw"].append(loudness(featureframe))
+        features["Loudness"]["raw"].append(loudness(featureframe))
         features["ZCR"]["raw"].append(zerocrossingrate(featureframe))
+        #features["Loudness"]["raw"].append(loudness(featureframe))
         spectrum = spec(w(featureframe))
         features["SpectralCentroid"]["raw"].append(centroid(spectrum))
         features["SpectralComplexity"]["raw"].append(SpectralComplexity(spectrum))
-        features["SpectralRolloff"]["raw"].append(SpectralRolloff(spectrum))
+        #features["SpectralRolloff"]["raw"].append(SpectralRolloff(spectrum))
        
         peaks = SpectralPeaks(spectrum)
-        features["Roughness"]["raw"].append(Dissonance(peaks[0],peaks[1]))
+        features["Roughness"]["raw"].append(Dissonance(peaks[0],peaks[1])*10.0)
         #features["SpectralFlux"]["raw"].append(SpectralFlux(spectrum))
     
     for feature in featurelist:
-        features[feature] = np.mean(features[feature]["raw"])
+        t = np.linspace(0, len(features[feature]["raw"]), num=len(features[feature]["raw"]))
+        features[feature + " variance"]=np.var(features[feature]["raw"])
+        #features[feature]["stdev"]=np.std(features[feature]["raw"])
+        features[feature + " corrcoef"]=np.corrcoef(t,features[feature]["raw"])[0][1]
+        features[feature] = np.median(features[feature]["raw"])
         #zoomFactor = 1/(len(features[feature]["raw"])/resolution)
         #features[feature +  "I"] = zoom(features[feature]["raw"],zoomFactor)
         #features[feature].pop("raw",None)
     
     
     return features
-
 
 def phenotypesForCells(cellBoundaries,audio):
 
@@ -362,7 +372,7 @@ def calculateRelationsForGenotypes(genotypes,sequenceData,t_fitness=0.2,n_relati
     
     return relations
 
-def genomeForSession(sessionID):
+def genomeForSession(sessionID,nGenes=10):
     
     allPhenotypesDicts = []
     
@@ -375,9 +385,15 @@ def genomeForSession(sessionID):
             allPhenotypesDicts.extend(phenotypes)
             
     phenotypeArray = []
+    keylist = allPhenotypesDicts[0].keys()
+    keylist.sort()
     
     for phenotypeDict in allPhenotypesDicts:
-        phenotypeArray.append(flatten(phenotypeDict.values()))
+        sortedDict = []
+        for key in keylist:
+            sortedDict.append(phenotypeDict[key])
+        phenotypeArray.append(sortedDict)
+        
     allPhenotypesVect = np.asarray(phenotypeArray)
     
     where_are_NaNs = np.isnan(allPhenotypesVect)
@@ -390,7 +406,7 @@ def genomeForSession(sessionID):
 
     alldata = np.vstack((dataByDimension))
         
-    cntr, u_orig, d, _, _, p, fpc = fuzz.cluster.cmeans(alldata, 15, 2, error=0.005, maxiter=1000)
+    cntr, u_orig, d, _, _, p, fpc = fuzz.cluster.cmeans(alldata, nGenes, 1.1, error=0.005, maxiter=1000)
     [u_orig[i][0] for i in range(len(d))]
     
     import sqlite3 as lite
