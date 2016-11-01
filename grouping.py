@@ -41,7 +41,7 @@ def silenceGaps(frames,order=20):
     
     return silenceGaps
 
-def groupBySilence(audio,hopSize=1024,t_silence=0.04,plot=0,order=50,minGapSize=10):
+def groupBySilence(audio,hopSize=1024,t_silence=0.04,plot=0,orderDivisor=15,minGapSize=8):
     
     timestamps = len(audio)
     
@@ -56,7 +56,7 @@ def groupBySilence(audio,hopSize=1024,t_silence=0.04,plot=0,order=50,minGapSize=
         else:
             silenceFrames.append(1)
 
-    gaps = silenceGaps(silenceFrames,int(len(audio)/samplerate/4))
+    gaps = silenceGaps(silenceFrames,int(len(audio)/samplerate/orderDivisor))
     
     gapFrames = []
     
