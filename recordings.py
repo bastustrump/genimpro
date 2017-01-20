@@ -1,47 +1,84 @@
-import sqlite3 as lite
 from essentia.standard import *
 import numpy as np
 import simplejson as json
 
+import sqlite3 as lite
+#db = lite.connect('genImpro.db')
+#c = db.cursor()
 
-db = lite.connect('genImpro.db')
-c = db.cursor() 
+
+import MySQLdb
+db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+c = db.cursor()
+
+
+def getGeneticsForRecording(recordingID):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
+
+    sqlcommand = "SELECT genetics FROM recordings where ID=%i" % (recordingID)
+    c.execute(sqlcommand)
+    data = c.fetchone()
+
+    if data[0] is None:
+        return None
+
+    #print data[0]
+
+    return json.loads(data[0])
 
 def getRecordingDetails(recordingID,printDetails=0):
-	c.execute("select ID,sessionID,key,date from recordings where ID=%i" % (recordingID))
-	values = c.fetchone()
-	if values==None:
-		raise Exception("No valid ID")
-		
-	(recordingID,sessionID,key,date) = values
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
 
-	if printDetails:
-		print "%i (%s):" % (recordingID,key)	
+    c.execute("select ID,sessionID,recordingKey,recordingDate from recordings where ID=%i" % (recordingID))
+    values = c.fetchone()
 
-	c.execute("select playerID,audiofile,ID from tracks where recordingID=%i" % (recordingID))
-	values = c.fetchall()
 
-	tracks = []
+    if values==None:
+    	raise Exception("No valid ID")
 
-	for track in values:
-		(playerID,audiofile,trackID) = track
-		c.execute("select name,instrument,t_silence,minGapSize from players where ID="+str(playerID))
-		track = c.fetchone()
-		tracks.append([track[0],track[1],audiofile,trackID,recordingID,playerID,track[2],track[3]])
+    (recordingID,sessionID,key,date) = values
 
-		if printDetails:
-			print "    %s (%s): %s" % (track[0],track[1],audiofile)
+    if printDetails:
+    	print "%i (%s):" % (recordingID,key)
 
-	c.execute("select date,key from sessions where ID="+str(sessionID))
-	session = c.fetchone()
-	values = [recordingID,session[1],session[0],sessionID,tracks,key,date]
-	return values
+    c.execute("select playerID,audiofile,ID from tracks where recordingID=%i" % (recordingID))
+    values = c.fetchall()
+
+
+    tracks = []
+
+    for track in values:
+    	(playerID,audiofile,trackID) = track
+    	c.execute("select name,instrument,t_silence,minGapSize from players where ID="+str(playerID))
+    	track = c.fetchone()
+    	tracks.append([track[0],track[1],audiofile,trackID,recordingID,playerID,track[2],track[3]])
+
+    	if printDetails:
+    		print "    %s (%s): %s" % (track[0],track[1],audiofile)
+
+    c.execute("select sessionDate,sessionKey from sessions where ID="+str(sessionID))
+    session = c.fetchone()
+    values = [recordingID,session[1],session[0],sessionID,tracks,key,date]
+
+
+    return values
 
 def getAudioForTrack(track,normalize=4):
 	#loader = essentia.standard.AudioLoader(filename=track[2])
 	#audio,samplerate,x,x,x,x = loader()
 	#mono_audio = np.asarray([audio[i][0] for i in range(0,len(audio)-1)])
-	
+
     monoLoader = essentia.standard.MonoLoader(filename=track[2])
 
     mono_audio = monoLoader()
@@ -49,7 +86,7 @@ def getAudioForTrack(track,normalize=4):
 
     return mono_audio
 
-	
+
 def listRecodings(sessionID=None,webservice=0,printDetails=0):
     if sessionID is not None:
         sqlQuery = "select ID from recordings where sessionID=" + str(sessionID)
@@ -64,10 +101,10 @@ def listRecodings(sessionID=None,webservice=0,printDetails=0):
 
     for recordingID in values:
     	recordingDetails = getRecordingDetails(recordingID)
-    	
+
     	if printDetails & (not webservice):
     		print "ID %i: %s on %s:" % (recordingDetails[0],recordingDetails[1],recordingDetails[2])
-    	
+
     	IDs.append(recordingDetails[0])
     	recordings.append(recordingDetails)
 
@@ -79,11 +116,11 @@ def listRecodings(sessionID=None,webservice=0,printDetails=0):
     	return json.dumps(recordings)
 
     return IDs
-		
+
 def createTracks():
-	c.execute("select ID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,key from recordings")
+	c.execute("select ID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,recodingKey from recordings")
 	values = c.fetchall()
-	
+
 	for recording in values:
 		(recordingID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,key) = recording
 		sqlcommand = "INSERT INTO tracks ('recordingID','playerID','audiofile') VALUES (%i,%i,'%s');" % (recordingID,playerCh1,audiofile1)
@@ -99,85 +136,87 @@ def createTracks():
 
 def updateSoniceventsForTrack(track,sonicevents):
     data = json.dumps(sonicevents)
-    
+
     sqlcommand = "UPDATE tracks SET sonicevents=%s where ID=%i" % (repr(data),track[3])
     c.execute(sqlcommand)
     db.commit()
-    
+
     print "Updated %i sonicevents for track %i" % (len(sonicevents),track[3])
 
 
 def updateCellsForTrack(track,cells):
     #clear sequences for track
-    sqlcommand = "DELETE FROM sequences where trackID=%i" % (track[3])
+    sqlcommand = "DELETE FROM soundcells where trackID=%i" % (track[3])
     c.execute(sqlcommand)
     db.commit()
-    
+
     for cell in cells:
         start = cell[0] #sonicevents[sequence[0]]["start"]
         end = cell[1] #sonicevents[sequence[-1]]["end"]
         events = json.dumps(cell)
-        sqlcommand = "INSERT INTO sequences (trackID,start,end,events) values (%i,%i,%i,%s)" % (track[3],start,end,repr(events))
+        sqlcommand = "INSERT INTO soundcells (trackID,start,end,events) values (%i,%i,%i,%s)" % (track[3],start,end,repr(events))
         c.execute(sqlcommand)
         db.commit()
-        
+
     print "Added %i cells for track %i" % (len(cells),track[3])
 
-def updateSequencesForTrack(track,sequences,sonicevents):
-    #clear sequences for track
-    sqlcommand = "DELETE FROM sequences where trackID=%i" % (track[3])
-    c.execute(sqlcommand)
-    db.commit()
-    
-    for sequence in sequences:
-        start = sequence[0] #sonicevents[sequence[0]]["start"]
-        end = sequence[1] #sonicevents[sequence[-1]]["end"]
-        events = [] #json.dumps(sequence)
-        sqlcommand = "INSERT INTO sequences (trackID,start,end,events) values (%i,%i,%i,%s)" % (track[3],start,end,repr(events))
-        c.execute(sqlcommand)
-        db.commit()
-        
-    print "Added %i sequences for track %i" % (len(sequences),track[3])
+# def updateSequencesForTrack(track,sequences,sonicevents):
+#     #clear sequences for track
+#     sqlcommand = "DELETE FROM sequences where trackID=%i" % (track[3])
+#     c.execute(sqlcommand)
+#     db.commit()
+
+#     for sequence in sequences:
+#         start = sequence[0] #sonicevents[sequence[0]]["start"]
+#         end = sequence[1] #sonicevents[sequence[-1]]["end"]
+#         events = [] #json.dumps(sequence)
+#         sqlcommand = "INSERT INTO sequences (trackID,start,end,events) values (%i,%i,%i,%s)" % (track[3],start,end,repr(events))
+#         c.execute(sqlcommand)
+#         db.commit()
+
+#     print "Added %i sequences for track %i" % (len(sequences),track[3])
 
 
-def updatePhenotypesForTrack(track,sequences,phenotypes):
-    
+def updatePhenotypesForTrack(track,sequences,phenotypes,dbField='phenotype'):
+
     for i in range(0,len(sequences)):
         events = json.dumps(sequences[i])
         phenotype = json.dumps(phenotypes[i])
-        sqlcommand = "UPDATE sequences SET phenotype=%s where trackID=%i AND events=%s" % (repr(phenotype),track[3],repr(events))
+        sqlcommand = "UPDATE soundcells SET %s=%s where trackID=%i AND start=%s" % (dbField,repr(phenotype),track[3],sequences[i][0])
         c.execute(sqlcommand)
         db.commit()
-        
+
     print "Updated %i phenotypes for track %i" % (len(phenotypes),track[3])
 
 
 def updateGenotypesForTrack(track,cellBoundaries,genotypes):
-    
+
     for i in range(0,len(cellBoundaries)):
         events = json.dumps(cellBoundaries[i])
         genotype = json.dumps(genotypes[i].tolist())
-        sqlcommand = "UPDATE sequences SET genotype=%s where trackID=%i AND events=%s" % (repr(genotype),track[3],repr(events))
+        sqlcommand = "UPDATE soundcells SET genotype=%s where trackID=%i AND start=%s" % (repr(genotype),track[3],cellBoundaries[i][0])
         c.execute(sqlcommand)
         db.commit()
-        
+
     print "Updated %i genotypes for track %i" % (len(genotypes),track[3])
 
 
+
+
 def updateRelationsForTrack(track,sequences,relations):
-    
+
     for i in range(0,len(relations)):
     	events = json.dumps(sequences[i])
     	relation = json.dumps(relations[i])
         sqlcommand = "UPDATE sequences SET relations=%s where trackID=%i AND events=%s" % (repr(relation),track[3],repr(events))
         c.execute(sqlcommand)
         db.commit()
-        
+
     print "Updated relations for track %i" % (track[3])
 
 
 def getGenotypesForTrack(track):
-    sqlcommand = "SELECT genotype FROM sequences where trackID=%i" % (track[3])
+    sqlcommand = "SELECT genotype,ID,start FROM soundcells where trackID=%i" % (track[3])
     c.execute(sqlcommand)
     data = c.fetchall()
 
@@ -188,14 +227,18 @@ def getGenotypesForTrack(track):
     	return None
 
     genotypes = []
-    
+    IDs = []
+    start = []
+
     for genotype in data:
         genotypes.append(json.loads(genotype[0]))
-        
-    return genotypes
+        IDs.append(int(genotype[1]))
+        start.append(genotype[2])
 
-def getPhenotypesForTrack(track):
-    sqlcommand = "SELECT phenotype FROM sequences where trackID=%i" % (track[3])
+    return (IDs,genotypes,start)
+
+def getPhenotypesForTrack(track,dbField='phenotypeNormed'):
+    sqlcommand = "SELECT %s,ID,start,end FROM soundcells where trackID=%i" % (dbField,track[3])
     c.execute(sqlcommand)
     data = c.fetchall()
 
@@ -206,13 +249,19 @@ def getPhenotypesForTrack(track):
     	return None
 
     phenotypes = []
-    
+    IDs = []
+    durations = []
+
+
     for phenotype in data:
         phenotypes.append(json.loads(phenotype[0]))
-        
-    return phenotypes
+        IDs.append(phenotype[1])
+        durations.append(phenotype[3]-phenotype[2])
 
-		
+
+    return (IDs,phenotypes,durations)
+
+
 def getSoniceventsForTrack(track):
     sqlcommand = "SELECT sonicevents FROM tracks where ID=%i" % (track[3])
     c.execute(sqlcommand)
@@ -223,22 +272,20 @@ def getSoniceventsForTrack(track):
 
     return json.loads(data[0])
 
-def getSequencesForTrack(track):
-    sqlcommand = "SELECT events FROM sequences where trackID=%i" % (track[3])
+def getSoundcellsForTrack(track):
+    sqlcommand = "SELECT start,end,events FROM soundcells where trackID=%i" % (track[3])
     c.execute(sqlcommand)
     data = c.fetchall()
 
     if data is None:
-    	return None
+        return None
 
     sequences = []
-    
-    for sequence in data:
-        sequences.append(json.loads(sequence[0]))
-        
-    return sequences
 
-import exceptions
+    for sequence in data:
+        sequences.append([sequence[0],sequence[1]])
+
+    return sequences
 
 def is_json(myjson):
     try:
@@ -256,7 +303,7 @@ def getCellsForTrack(track):
         return None
 
     cells = []
-    
+
     for cell in data:
         cellObject = []
         print cell
@@ -266,15 +313,14 @@ def getCellsForTrack(track):
             else:
                 cellObject.append(cellElement)
         cells.append(cellObject)
-        
-    return cells  
+
+    return cells
 
 def getRecordingIDforTrack(trackID):
     sqlcommand = "SELECT recordingID FROM tracks where ID=%i" % (trackID)
     c.execute(sqlcommand)
     data = c.fetchone()
     return data[0]
-
 
 
 def getSequenceIDsForTrack(track):
@@ -286,38 +332,42 @@ def getSequenceIDsForTrack(track):
         return None
 
     sequences = []
-    
+
     for sequence in data:
         sequence = list(sequence)
         sequence.append(track[3])
         sequences.append(sequence)
-        
+
     return sequences
 
 def prepareDataForRelations(trackID):
     recordingID = getRecordingIDforTrack(trackID)
     recordingDetails = getRecordingDetails(recordingID)
     recordingTracks = recordingDetails[4]
-    
+
     genotypes = []
     sequenceData = []
-    
+
     for track in recordingTracks:
         trackGenotypes = getGenotypesForTrack(track)
         if type(trackGenotypes) <> type(None):
             genotypes.extend(trackGenotypes)
             sequenceData.extend(getSequenceIDsForTrack(track))
-    
+
     return (genotypes,sequenceData)
 
-def getGenome(sessionID):
-    sqlcommand = "SELECT CNTR FROM genome where sessionID=%i order by ID desc LIMIT 1 " % (sessionID)
+def getGenome():
+    db = MySQLdb.connect(host="localhost",
+                 user="genimpro",
+                 passwd="genimpropw#2016",
+                 db="genimpro")
+    c = db.cursor()
+
+    sqlcommand = "SELECT variants,clusterGroups FROM genome order by ID desc LIMIT 1 "
     c.execute(sqlcommand)
     data = c.fetchone()
 
-    return np.asarray(json.loads(data[0]))
-    		
+    return json.loads(data[0]), json.loads(data[1])
+
 if __name__ == '__main__':
 	listRecodings()
-	
-	

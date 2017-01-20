@@ -30,6 +30,13 @@ np.seterr(all='ignore')
 
 global audio
 
+import MySQLdb
+db = MySQLdb.connect(host="localhost", 
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+c = db.cursor() 
+
 def float2pcm(sig, dtype='int16'):
     """Convert floating point signal with a range from -1 to 1 to PCM.
 

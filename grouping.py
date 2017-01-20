@@ -30,7 +30,9 @@ def silenceGaps(frames,order=20):
         consecutiveNumbers.append(counter)
     
     featureArray = np.asarray(consecutiveNumbers)
-    
+    print order
+    if order<1:
+        order = 1
     maxima = argrelmax(featureArray, order=order)
     featureMaxima = maxima[0] -1
     
@@ -55,7 +57,7 @@ def groupBySilence(audio,hopSize=1024,t_silence=0.04,plot=0,orderDivisor=15,minG
             silenceFrames.append(0)
         else:
             silenceFrames.append(1)
-
+    
     gaps = silenceGaps(silenceFrames,int(len(audio)/samplerate/orderDivisor))
     
     gapFrames = []
