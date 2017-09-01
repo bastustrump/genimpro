@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Raleway:400,300,700" rel="stylesheet" type="text/css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="d3.v4.min.js"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<title>GENIMPRO</title>
+<style>
+
+
+
+rect.selection {
+    stroke          : white;
+    stroke-dasharray: 4px;
+    stroke-opacity  : 0.5;
+    fill            : transparent;
+}
+
+    /* disable text selection */
+svg *::selection {
+    background : transparent;
+}
+
+svg *::-moz-selection {
+    background:transparent;
+}
+
+svg *::-webkit-selection {
+    background:transparent;
+}
+
+    .gp-selected {
+      stroke-width: 1px;
+
+    }
+
+    .gp_links line {
+        stroke: #005563;
+        stroke-opacity: 0.6;
+    }
+
+    .gp_nodes circle {
+        opacity: 0.7;
+    }
+
+    .gp_nodes text {
+        font-size: : 12px;
+        fill: white;
+    }
+
+    .gp_strong {
+        text-transform: uppercase;
+    }
+
+    .gp_small {
+        font-size: 11px;
+    }
+
+    .id-label {
+        font-size: 8px;
+        stroke: #005563;
+    }
+
+    .gp_recording {
+        stroke: red;
+    }
+
+    body {
+        overflow: hidden;
+        background-color: rgb(20, 20, 20);
+        font-family: Lato, Helvetica, Arial, sans-serif;
+        font-weight: 200;
+    }
+
+    .currentTime line {
+        stroke: red;
+        fill: none;
+    }
+
+    .links path {
+        stroke: #999;
+        fill: none;
+    }
+
+    .nodes circle {
+        stroke: rgb(20, 20, 20);
+        stroke-width: 2.0px;
+    }
+
+    .nodes text {
+        pointer-events: none;
+        font: 12px sans-serif;
+    }
+
+    .phenotypePoint {
+        stroke: none;
+        fill: red;
+    }
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: white;
+        shape-rendering: crispEdges;
+    }
+
+    .axis {
+        font: 10px Lato, Helvetica, Arial, sans-serif;
+        fill: white;
+    }
+
+    .axis--x path {
+        display: none;
+    }
+
+    .line {
+        fill: none;
+        stroke: red;
+        opacity: 0.6;
+        stroke-width: 1px;
+    }
+
+    .bar:hover {
+        fill: brown;
+    }
+
+    .geneBar:hover, .geneBar.hovered {
+        fill: rgb(123, 227, 41);
+    }
+
+    .dropdown-menu {
+        font-size: 11px;
+        max-height: 400px;
+        overflow: hidden;
+        overflow-y: auto;
+    }
+
+    .bottom0.panel-group {
+        margin-bottom: 0;
+    }
+
+    #recordingInfotext {
+        margin-left: 50px;
+    }
+
+    .soundcellValuegroup {
+        clear: both;
+        margin-bottom: 10px;
+    }
+
+    .soundcellKey {
+        float: left;
+        font-weight: bold;
+        margin-right: 6px;
+    }
+
+    .soundcellValue {
+        float: left;
+    }
+
+    .clusterGroup {
+      float: left;
+      margin-top: -10px;
+      margin-bottom: 2px;
+    }
+
+    p#navbarTitle.navbar-text {
+        height: 10px;
+    }
+
+    .table {
+      margin-bottom: 10px;
+    }
+</style>
+
+<body>
+
+<br>
+
+<h2>&nbsp;&nbsp;&nbsp;<a href="index.htm?recordingID=247">IMPROVISATION 247</a></h2>
+
+</body>

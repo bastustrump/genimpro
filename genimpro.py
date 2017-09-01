@@ -20,18 +20,24 @@ getVar = lambda searchList, ind: [searchList[i] for i in ind]
 
 
 def geneticsForVisualisation(recordingID):
-    phyloGenotypes = []
     soundcellIDs = []
     startSample =[]
     groups = []
     durations = []
+    genotypes = []
+    phenotypes = []
+    lineageIDs = []
+    fitness = []
 
     recordingDetails = recordings.getRecordingDetails(recordingID)
 
     for g,track in enumerate(recordingDetails[4]):
-        ids,genotypes,start = recordings.getGenotypesForTrack(track)
-        ids,phenotypes,duration = recordings.getPhenotypesForTrack(track)
-        phyloGenotypes.extend(genotypes)
+        ids,trackGenotypes,start,lineages,fitnessValues = recordings.getGenotypesForTrack(track)
+        ids,trackPhenotypes,duration = recordings.getPhenotypesForTrack(track)
+        fitness.extend(fitnessValues)
+        genotypes.extend(trackGenotypes)
+        lineageIDs.extend(lineages)
+        phenotypes.extend(trackPhenotypes)
         soundcellIDs.extend(ids)
         startSample.extend(start)
         durations.extend(duration)
@@ -48,17 +54,17 @@ def geneticsForVisualisation(recordingID):
 
     nodes = []
     for i,idx in enumerate(soundcellIDs):
-        nodes.append({"id":idx,"startTime":startSample[i]/samplerate,"duration":durations[i]/samplerate,"group":groups[i],"lineage":lin[i]})
+        nodes.append({"id":idx,"startTime":startSample[i]/samplerate,"duration":durations[i]/samplerate,"group":groups[i],"lineage":lin[i],"fitness":fitness[i],"genotype":genotypes[i],"phenotype":phenotypes[i],"lineageID":lineageIDs[i]})
 
     links = []
     for l,lineage in enumerate(genetics):
-        
+
         for i in range(0,len(lineage)-1):
             links.append({"source":lineage[i][0],"target":lineage[i+1][0],"distance":lineage[i+1][1]} )
             #print ({"source":lineage[i][0],"target":lineage[i+1][0],"distance":lineage[i+1][1]} )
 
         if lineage[0][1] != 0:
-            links.append({"source":lineage[0][1][0],"target":lineage[0][0],"distance":lineage[0][1][1]*2.0})
+            links.append({"source":lineage[0][1][0],"target":lineage[0][0],"distance":lineage[0][1][1]*2.0,"descendant":True})
 
     return {"nodes":nodes,"links":links}
 
@@ -78,31 +84,31 @@ def soniceventsForTrack(track):
 def eventPlot(event,filename):
 	plt.figure()
 	t = np.linspace(0, len(event["audio"])/samplerate, num=len(event["audio"]))
-	
+
 	#t2 = np.linspace(0, len(se[0]["audio"])/48000.0, num=len(se[0]["features"]["ZCR"]["raw"]))
-	
+
 	plt.plot(t,event["audio"],linewidth=0.5)
 	#plt.show()
 	plt.savefig(filename,dpi=600)
-	
+
 def analyseSession(sessionID):
     recordingIDs = recordings.listRecodings(sessionID)
 
     for recordingID in recordingIDs:
         analyseRecording(recordingID,sessionID)
-        
+
     genomeForSession(sessionID)
-    
+
     for recordingID in recordingIDs:
         analyseGenetics(recordingID,sessionID)
 
 def analyseGenetics(recordingID,sessionID,updateAll=0):
 
     recordingDetails = genimpro.recordings.getRecordingDetails(recordingID)
-    
+
     for track in recordingDetails[4]:
         analyseGenotypes(track,sessionID)
-    
+
     for track in recordingDetails[4]:
         addRelations(track)
 
@@ -139,14 +145,14 @@ def analyseRecording(recordingID,sessionID,updateAll=0):
         analysePhenotypes(track)
 
 
-			
+
 def isEven(number):
         return number % 2 == 0
 
 # def phenotypeForSequence--OLD(sequence,sonicevents,audio):
-    
+
 #     events = sonicevents[sequence[0]:sequence[-1]]
-    
+
 #     eventEndsample = events[-1]["end"]
 
 #     #always even framesize
@@ -157,13 +163,13 @@ def isEven(number):
 
 
 #     sequenceAudio = audio[events[0]["start"]:eventEndsample]
-    
+
 #     sequenceFeatures = {}
 #     sequenceFeatures["duration"] = []
 #     for feature in events[0]["features"]:
 #         sequenceFeatures[feature] = []
-    
-    
+
+
 #     for event in events:
 #         sequenceFeatures["duration"].append((event["end"]-event["start"])/samplerate)
 #         for feature in event["features"]:
@@ -171,19 +177,19 @@ def isEven(number):
 #                 value = event["features"][feature]["mean"]
 #             else:
 #                 value = event["features"][feature]
-                
+
 #             sequenceFeatures[feature].append(value)
-    
+
 #     attributesList = ["dynamics","rhythmics","melodics","harmonics","timbre"]
 #     attributes = {}
-    
+
 #     for attribute in attributesList:
 #         attributes[attribute] = {}
-        
+
 #     attributes["dynamics"]["range"] = abs(np.amax(sequenceFeatures["Loudness"])-np.amin(sequenceFeatures["Loudness"]))
 #     attributes["dynamics"]["median"] = np.median(sequenceFeatures["Loudness"])
 
-        
+
 #     microtime = np.amin(sequenceFeatures["duration"])
 #     hist,bins = np.histogram(sequenceFeatures["duration"]/microtime)
 #     attributes["rhythmics"]["variance"] = float(len(hist[np.nonzero(hist)])) / len(sequenceFeatures["duration"])
@@ -200,7 +206,7 @@ def isEven(number):
 #     else:
 #     	attributes["melodics"]["variance"] = np.nan
 #     	attributes["melodics"]["range"] = np.nan
-#     	attributes["melodics"]["median"] = np.nan     
+#     	attributes["melodics"]["median"] = np.nan
 
 #     spec = essentia.standard.Spectrum()
 #     SpectralPeaks = essentia.standard.SpectralPeaks(sampleRate=samplerate)
@@ -238,7 +244,7 @@ resolution=5.0
 
 # def phenotypeForCell(cellAudio):
 
-    
+
 #     effectiveDuration = essentia.standard.EffectiveDuration(sampleRate=samplerate,thresholdRatio=0.01)
 #     loudness = essentia.standard.Loudness()
 #     zerocrossingrate = essentia.standard.ZeroCrossingRate()
@@ -259,34 +265,34 @@ resolution=5.0
 #     RhythmExtractor = essentia.standard.RhythmExtractor2013()
 #     Key = essentia.standard.Key()
 #     TuningFrequency = essentia.standard.TuningFrequency()
-    
+
 #     if (len(cellAudio) % 2 <> 0):
 #         chromaAudio = cellAudio[0:-1]
 #     else:
 #         chromaAudio = cellAudio
-        
+
 #     spectrum = spec(chromaAudio)
 #     peaks = SpectralPeaks(spectrum)
 #     tuning = TuningFrequency(peaks[0],peaks[1])
-    
+
 #     HPCP = essentia.standard.HPCP(sampleRate=samplerate, referenceFrequency =tuning[0])
 #     chroma = HPCP(peaks[0],peaks[1])
 
-    
+
 #     eff_duration = effectiveDuration(cellAudio)
- 
+
 #     featurelist = ["ZCR","SpectralCentroid","SpectralComplexity","Roughness","Loudness"]
 #     features = {}
-    
+
 #     for feature in featurelist:
 #         features[feature] = {}
 #         features[feature]["raw"]=[0]
-    
+
 #     chromaKeys = ["A","A#","B","C","C#","D","D#","E","F","F#","G","G#"]
-    
+
 #     for i,key in enumerate(chroma.tolist()):
 #         features["Chroma " + chromaKeys[i]] = key
-        
+
 #     features["DynamicComplexity"] = list(DynamicComplexity(cellAudio))[0]/25
 #     #features["SpectralCentroidA"]= centroid(spectrum)
 #     #features["SpectralRolloffA"] = SpectralRolloff(spectrum)
@@ -296,8 +302,8 @@ resolution=5.0
 #     features["Rhythm"] = RhythmExtractor(cellAudio)[0]/200
 #     #features["ZCRA"] = zerocrossingrate(cellAudio)
 #     features["Density"] = eff_duration * samplerate / len(cellAudio)
-    
-    
+
+
 #     for featureframe in FrameGenerator(cellAudio, frameSize = hop_s, hopSize = hop_s/2):
 #         features["Loudness"]["raw"].append(loudness(featureframe))
 #         features["ZCR"]["raw"].append(zerocrossingrate(featureframe))
@@ -306,11 +312,11 @@ resolution=5.0
 #         features["SpectralCentroid"]["raw"].append(centroid(spectrum))
 #         features["SpectralComplexity"]["raw"].append(SpectralComplexity(spectrum))
 #         #features["SpectralRolloff"]["raw"].append(SpectralRolloff(spectrum))
-       
+
 #         peaks = SpectralPeaks(spectrum)
 #         features["Roughness"]["raw"].append(Dissonance(peaks[0],peaks[1])*10.0)
 #         #features["SpectralFlux"]["raw"].append(SpectralFlux(spectrum))
-    
+
 #     for feature in featurelist:
 #         t = np.linspace(0, len(features[feature]["raw"]), num=len(features[feature]["raw"]))
 #         features[feature + " variance"]=np.var(features[feature]["raw"])
@@ -320,8 +326,8 @@ resolution=5.0
 #         #zoomFactor = 1/(len(features[feature]["raw"])/resolution)
 #         #features[feature +  "I"] = zoom(features[feature]["raw"],zoomFactor)
 #         #features[feature].pop("raw",None)
-    
-    
+
+
 #     return features
 
 def phenotypesForCells(cellBoundaries,audio):
@@ -331,7 +337,6 @@ def phenotypesForCells(cellBoundaries,audio):
     for cell in cellBoundaries:
 
         cellAudio = audio[cell[0]:cell[1]]
-        
         cellPhenotype = phenotypeForCell(cellAudio)
         cellPhenotypes.append(cellPhenotype)
 
@@ -393,16 +398,16 @@ from scipy.spatial import distance
 def calculateRelationsForGenotypes(genotypes,sequenceData,t_fitness=0.2,n_relations=10):
     matrix = distance.cdist(genotypes, genotypes, 'euclidean')
     matrix = matrix/np.amax(matrix)
-    
+
     relations = []
-    
+
     for i in range(len(genotypes)):
         relation = {}
-        
+
         sorted_distances_indices = np.argsort(matrix[i])
         relation["children"] = []
         relation["parents"] = []
-        
+
         for n in range(1,len([x for x in matrix[i] if x<t_fitness])):
             sequenceIndex = sorted_distances_indices[n]
 
@@ -414,33 +419,33 @@ def calculateRelationsForGenotypes(genotypes,sequenceData,t_fitness=0.2,n_relati
         relation["fitness"] = len(relation["children"])
 
         relations.append(relation)
-    
+
     return relations
 
 def genomeForSession(sessionID,nGenes=10):
-    
+
     allPhenotypesDicts = []
-    
+
     for recordingID in recordings.listRecodings(sessionID):
         recordingDetails = recordings.getRecordingDetails(recordingID)
-    
+
     for track in recordingDetails[4]:
         phenotypes = recordings.getPhenotypesForTrack(track)
         if type(phenotypes) is list:
             allPhenotypesDicts.extend(phenotypes)
-            
+
     phenotypeArray = []
     keylist = allPhenotypesDicts[0].keys()
     keylist.sort()
-    
+
     for phenotypeDict in allPhenotypesDicts:
         sortedDict = []
         for key in keylist:
             sortedDict.append(phenotypeDict[key])
         phenotypeArray.append(sortedDict)
-        
+
     allPhenotypesVect = np.asarray(phenotypeArray)
-    
+
     where_are_NaNs = np.isnan(allPhenotypesVect)
     allPhenotypesVect[where_are_NaNs] = 0
 
@@ -450,10 +455,10 @@ def genomeForSession(sessionID,nGenes=10):
         dataByDimension.append([allPhenotypesVect[i][dimension] for i in range(0,len(allPhenotypesVect)-1)])
 
     alldata = np.vstack((dataByDimension))
-        
+
     cntr, u_orig, d, _, _, p, fpc = fuzz.cluster.cmeans(alldata, nGenes, 1.1, error=0.005, maxiter=1000)
     [u_orig[i][0] for i in range(len(d))]
-    
+
     import sqlite3 as lite
     import json
 
@@ -470,20 +475,15 @@ def genomeForSession(sessionID,nGenes=10):
 
 
 if __name__ == '__main__':
-	
+
 	if len(sys.argv) < 2:
 		print "Usage: recording ID"
 		recordings.listRecodings()
 		sys.exit(1)
-	
+
 	recordingID = int(sys.argv[1])
-	
+
 	if len(sys.argv) >= 3:
 		trackNumber = int(sys.argv[2])
-	
+
 	analyseRecording(recordingID,trackNumber)
-
-	
-	
-	
-

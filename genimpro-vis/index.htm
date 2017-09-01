@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Raleway:400,300,700" rel="stylesheet" type="text/css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="d3.v4.min.js"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+<script src="https://cdn.rawgit.com/eligrey/FileSaver.js/e9d941381475b5df8b7d7691013401e171014e89/FileSaver.min.js"></script>
+
+
+
+<title>GENIMPRO</title>
+<style>
+    rect.selection {
+        stroke: white;
+        stroke-dasharray: 4px;
+        stroke-opacity: 0.5;
+        fill: transparent;
+    }
+    /* disable text selection */
+
+    svg *::selection {
+        background: transparent;
+    }
+
+    svg *::-moz-selection {
+        background: transparent;
+    }
+
+    svg *::-webkit-selection {
+        background: transparent;
+    }
+
+    .gp-selected {
+        stroke-width: 1px;
+    }
+
+    .gp_links line {
+        stroke: #005563;
+        stroke-opacity: 0.6;
+    }
+
+    /*.gp_nodes circle {
+        opacity: 0.7;
+    }*/
+
+    .gp_nodes text {
+        font-size: : 12px;
+        fill: white;
+        font-weight: 400;
+    }
+
+    .gp_strong {
+        text-transform: uppercase;
+    }
+
+    .gp_small {
+        font-size: 11px;
+    }
+
+    .id-label {
+        font-size: 12px;
+        stroke-width: 0px;
+        stroke: #005563;
+    }
+
+    .gp_recording {
+        stroke: red;
+    }
+
+    body {
+        overflow: hidden;
+        /*background-color: rgb(20, 20, 20);*/
+        background-color: rgb(20, 20, 20);
+        font-family: Lato, Helvetica, Arial, sans-serif;
+        font-weight: 200;
+    }
+
+    .currentTime line {
+        stroke: red;
+        fill: none;
+    }
+
+
+    .links path {
+        /*stroke: #999;*/
+        stroke: #999;
+        fill: none;
+        stroke-width: 1px;
+    }
+
+    .nodes circle {
+        stroke: rgb(20, 20, 20);
+        stroke-width: 2.0px;
+    }
+
+    .nodes text {
+        pointer-events: none;
+        font: 12px sans-serif;
+    }
+
+    .phenotypePoint {
+        stroke: none;
+        fill: red;
+    }
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: white;
+        shape-rendering: crispEdges;
+    }
+
+    .axis {
+        font: 10px Lato, Helvetica, Arial, sans-serif;
+        fill: white;
+    }
+
+    .axis--x path {
+        display: none;
+    }
+
+    .line {
+        fill: none;
+        stroke: red;
+        opacity: 0.6;
+        stroke-width: 1px;
+    }
+
+    .bar:hover {
+        fill: brown;
+    }
+
+    .geneBar:hover,
+    .geneBar.hovered {
+        fill: rgb(123, 227, 41);
+    }
+
+    .dropdown-menu {
+        font-size: 11px;
+        max-height: 400px;
+        overflow: hidden;
+        overflow-y: auto;
+    }
+
+    .bottom0.panel-group {
+        margin-bottom: 0;
+    }
+
+    #recordingInfotext {
+        margin-left: 50px;
+    }
+
+    .soundcellValuegroup {
+        clear: both;
+        margin-bottom: 10px;
+    }
+
+    .soundcellKey {
+        float: left;
+        font-weight: bold;
+        margin-right: 6px;
+    }
+
+    .soundcellValue {
+        float: left;
+    }
+
+    .clusterGroup {
+        float: left;
+        margin-top: -10px;
+        margin-bottom: 2px;
+    }
+
+    p#navbarTitle.navbar-text {
+        height: 10px;
+    }
+
+    .table {
+        margin-bottom: 10px;
+    }
+</style>
+
+<body>
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <a class="navbar-brand disabled" href="#">
+                    <span class="glyphicon glyphicon-equalizer" aria-hidden="true"></span> GENIMPRO</a>
+                <div class="navbar-left btn-group" role="group" aria-label="...">
+                    <button class="btn btn-default navbar-btn" id="toggleVisTree" onclick="toggleVis(false)"><span class="glyphicon glyphicon-grain" aria-hidden="true"></span></button>
+                    <button class="btn btn-default navbar-btn" id="toggleVisAligned" onclick="toggleVis(true)"><span class="glyphicon glyphicon-align-left" aria-hidden="true"></span></button>
+                </div>
+                <ul class="nav navbar-nav">
+                    <li class="dropdown disabled">
+                        <a href="#" id="recordingButton" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">IMPROVISATION <span class="caret"></span></a>
+                        <ul class="dropdown-menu multi-column columns-2" role="menu" id="recordingSelector"></ul>
+                    </li>
+                </ul>
+                <p class="navbar-text" id="navbarTitle">
+                    <audio id="audioElement" style="width:600px"></audio>
+                </p>
+            </div>
+            <button class="btn btn-default navbar-btn" id="saveButton"><span class="glyphicon glyphicon-download" aria-hidden="true"></span></button>
+            <form class="navbar-form navbar-right" role="search">
+                <div class="form-group">
+                    <input type="text" class="form-control" placeholder="Search">
+                </div>
+                <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+            </form>
+        </div>
+        <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container-fluid -->
+    </nav>
+    <svg width="1300" height="1000" id="soundcellsVis"></svg>
+    <div class="footer navbar-fixed-bottom" id="inspector">
+        <div class="panel-group bottom0" id="accordion" role="tablist" aria-multiselectable="true">
+            <div class="panel panel-default">
+                <div class="panel-heading" role="tab" id="headingOne" style="cursor: pointer" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+
+                    <div style="float: left;">
+                        <h4 class="panel-title">
+           <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+         </h4>
+                    </div>
+                    <div id="recordingInfotext">
+                        &nbsp;
+                    </div>
+
+                </div>
+                <div id="collapseOne" class="panel-collapse collapse notifications-scroll-area" role="tabpanel" aria-labelledby="headingOne">
+                    <div class="panel-body ">
+                        <table class="table table-striped table-hover table-condensed">
+                            <thead>
+                                <tr>
+                                    <th width="200">Metadata</th>
+                                    <th>Genotype</th>
+                                    <th width="100"></th>
+                                    <th width="300">Phenotype</th>
+                                    <th width="200"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="soundcellValuegroup" style="margin-top: 12px;">
+
+                                            <div class="soundcellKey">Sound Cell ID: </div>
+                                            <div id="soundcellID">&nbsp;</div>
+                                        </div>
+
+                                        <div class="soundcellValuegroup">
+                                            <div class="soundcellKey">Lineage ID: </div>
+                                            <div id="lineageID">&nbsp;</div>
+                                        </div>
+                                        <br>
+                                        <div class="soundcellValuegroup">
+                                            <audio id="soundcellAudio" style="width:180px"></audio>
+                                        </div>
+
+                                        <div class="soundcellValuegroup">
+                                            <div class="soundcellKey">Fitness: </div>
+                                            <div id="fitness">&nbsp;</div>
+                                        </div>
+
+                                        <td><svg height="180" style="width: 100%" id="genotypeChart"></svg>
+                                            <div id="clusterGroup"></div>
+                                        </td>
+
+                                        <td>
+                                            <div class="soundcellValuegroup" style="margin-top: 12px;">
+                                                <div class="soundcellKey">Gene</div><br>
+                                                <div id="Gene">&nbsp;</div>
+                                            </div>
+
+                                            <div class="soundcellValuegroup">
+                                                <div class="soundcellKey">Allele</div><br>
+                                                <div id="Allele">&nbsp;</div>
+                                            </div>
+
+                                        </td>
+
+                                    </td>
+
+                                    <td><svg width="300" height="200" id="phenotypeChart"></svg></td>
+                                    <td>
+                                        <div class="soundcellValuegroup" style="margin-top: 12px;">
+                                            <div class="soundcellKey">HPCP</div>
+                                            <div id="HPCP">&nbsp;</div>
+                                        </div>
+
+                                        <div class="soundcellValuegroup">
+                                            <div class="soundcellKey">MelodicRoot</div>
+                                            <div id="MelodicRoot">&nbsp;</div>
+                                        </div>
+
+                                        <div class="soundcellValuegroup">
+                                            <div class="soundcellKey">Intervals</div>
+                                            <div id="Intervals">&nbsp;</div>
+                                        </div>
+                                        <br>
+                                        <div class="soundcellValuegroup">
+                                            <div class="soundcellKey" id="phenotypeKey"></div>
+                                            <div id="phenotypeValue">&nbsp;</div>
+
+                                            <div id="phenotypeDomain">&nbsp;</div>
+                                        </div>
+
+                                    </td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <script src="genimpro.js"></script>
+        <script src="gi_genepools.js"></script>
+
+        <script>
+
+
+        //var myVar = setInterval(myTimer, 6000);
+
+        var recCounter = 0;
+        var cssStyleText = "";
+
+        function myTimer() {
+
+          var svgString = getSVGString(svg.node());
+
+          //svgString2Image(svgString, 2 * width, 2 * height, 'png', save); // passes Blob and filesize String to the callback
+          //console.log(svgString);
+
+          var blob = new Blob([svgString], {type: "text/plain;charset=utf-8"});
+          saveAs(blob, recCounter + ".svg");
+
+
+          recCounter = recCounter+1;
+          //loadNext
+          node.selectAll("*").remove();
+          link.selectAll("*").remove();
+          $("[recordingid=" + recCounter + "]").trigger("click");
+          //window.location.href = "index.htm?recordingID=" + (parseInt(recordingID)+1);
+
+        }
+
+
+
+
+
+            // Set-up the export button
+            d3.select('#saveButton').on('click', function() {
+                var svgString = getSVGString(svg.node());
+
+                //svgString2Image(svgString, 2 * width, 2 * height, 'png', save); // passes Blob and filesize String to the callback
+                //console.log(svgString);
+
+                var blob = new Blob([svgString], {type: "text/plain;charset=utf-8"});
+                saveAs(blob, "gi.svg");
+
+                // function save(dataBlob, filesize) {
+                //     saveAs(svgString, 'D3 vis exported to PNG.png'); // FileSaver.js function
+                // }
+            });
+
+            // Below are the functions that handle actual exporting:
+            // getSVGString ( svgNode ) and svgString2Image( svgString, width, height, format, callback )
+            function getSVGString(svgNode) {
+                svgNode.setAttribute('xlink', 'http://www.w3.org/1999/xlink');
+                //var cssStyleText = getCSSStyles(svgNode);
+                if (cssStyleText=="") {
+                  cssStyleText = getCSSStyles(svgNode);
+                }
+
+                //console.log(cssStyleText);
+                appendCSS(cssStyleText, svgNode);
+
+                var serializer = new XMLSerializer();
+                var svgString = serializer.serializeToString(svgNode);
+                svgString = svgString.replace(/(\w+)?:?xlink=/g, 'xmlns:xlink='); // Fix root xlink without namespace
+                svgString = svgString.replace(/NS\d+:href/g, 'xlink:href'); // Safari NS namespace fix
+
+                return svgString;
+
+                function getCSSStyles(parentElement) {
+                    var selectorTextArr = [];
+
+                    // Add Parent element Id and Classes to the list
+                    selectorTextArr.push('#' + parentElement.id);
+                    for (var c = 0; c < parentElement.classList.length; c++)
+                        if (!contains('.' + parentElement.classList[c], selectorTextArr))
+                            selectorTextArr.push('.' + parentElement.classList[c]);
+
+                    // Add Children element Ids and Classes to the list
+                    var nodes = parentElement.getElementsByTagName("*");
+                    for (var i = 0; i < nodes.length; i++) {
+                        var id = nodes[i].id;
+                        if (!contains('#' + id, selectorTextArr))
+                            selectorTextArr.push('#' + id);
+
+                        var classes = nodes[i].classList;
+                        for (var c = 0; c < classes.length; c++)
+                            if (!contains('.' + classes[c], selectorTextArr))
+                                selectorTextArr.push('.' + classes[c]);
+                    }
+
+                    // Extract CSS Rules
+                    var extractedCSSText = "";
+                    for (var i = 0; i < document.styleSheets.length; i++) {
+                        var s = document.styleSheets[i];
+
+                        try {
+                            if (!s.cssRules) continue;
+                        } catch (e) {
+                            if (e.name !== 'SecurityError') throw e; // for Firefox
+                            continue;
+                        }
+
+                        var cssRules = s.cssRules;
+                        for (var r = 0; r < cssRules.length; r++) {
+                            if (contains(cssRules[r].selectorText, selectorTextArr))
+                                extractedCSSText += cssRules[r].cssText;
+                        }
+                    }
+
+
+                    return extractedCSSText;
+
+                    function contains(str, arr) {
+                        return arr.indexOf(str) === -1 ? false : true;
+                    }
+
+                }
+
+                function appendCSS(cssText, element) {
+                    var styleElement = document.createElement("style");
+                    styleElement.setAttribute("type", "text/css");
+                    styleElement.innerHTML = cssText;
+                    var refNode = element.hasChildNodes() ? element.children[0] : null;
+                    element.insertBefore(styleElement, refNode);
+                }
+            }
+
+
+
+
+            function svgString2Image(svgString, width, height, format, callback) {
+                var format = format ? format : 'png';
+
+                var imgsrc = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString))); // Convert SVG string to data URL
+
+                var canvas = document.createElement("canvas");
+                var context = canvas.getContext("2d");
+
+                canvas.width = width;
+                canvas.height = height;
+
+                var image = new Image();
+                image.onload = function() {
+                    context.clearRect(0, 0, width, height);
+                    context.drawImage(image, 0, 0, width, height);
+
+                    canvas.toBlob(function(blob) {
+                        var filesize = Math.round(blob.length / 1024) + ' KB';
+                        if (callback) callback(blob, filesize);
+                    });
+
+
+                };
+
+                image.src = imgsrc;
+            }
+        </script>
+
+
+</body>

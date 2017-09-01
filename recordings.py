@@ -8,12 +8,29 @@ import sqlite3 as lite
 
 
 import MySQLdb
-db = MySQLdb.connect(host="localhost",
+# db = MySQLdb.connect(host="localhost",
+#                      user="genimpro",
+#                      passwd="genimpropw#2016",
+#                      db="genimpro")
+# c = db.cursor()
+
+def getGenepoolForRecording(recordingID):
+    db = MySQLdb.connect(host="localhost",
                      user="genimpro",
                      passwd="genimpropw#2016",
                      db="genimpro")
-c = db.cursor()
+    c = db.cursor()
 
+    sqlcommand = "SELECT genepool FROM recordings where ID=%i" % (recordingID)
+    c.execute(sqlcommand)
+    data = c.fetchone()
+
+    if data[0] is None:
+        return None
+
+    #print data[0]
+
+    return json.loads(data[0])
 
 def getGeneticsForRecording(recordingID):
     db = MySQLdb.connect(host="localhost",
@@ -32,6 +49,25 @@ def getGeneticsForRecording(recordingID):
     #print data[0]
 
     return json.loads(data[0])
+
+def getSoundcell(ID):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
+
+    sqlcommand = "SELECT start,end,events FROM soundcells where ID=%i" % (ID)
+    c.execute(sqlcommand)
+    data = c.fetchall()
+
+    if data is None:
+        return None
+
+    print data
+
+    return data
+
 
 def getRecordingDetails(recordingID,printDetails=0):
     db = MySQLdb.connect(host="localhost",
@@ -88,6 +124,11 @@ def getAudioForTrack(track,normalize=4):
 
 
 def listRecodings(sessionID=None,webservice=0,printDetails=0):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     if sessionID is not None:
         sqlQuery = "select ID from recordings where sessionID=" + str(sessionID)
     else:
@@ -118,23 +159,33 @@ def listRecodings(sessionID=None,webservice=0,printDetails=0):
     return IDs
 
 def createTracks():
-	c.execute("select ID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,recodingKey from recordings")
-	values = c.fetchall()
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
+    c.execute("select ID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,recodingKey from recordings")
+    values = c.fetchall()
 
-	for recording in values:
-		(recordingID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,key) = recording
-		sqlcommand = "INSERT INTO tracks ('recordingID','playerID','audiofile') VALUES (%i,%i,'%s');" % (recordingID,playerCh1,audiofile1)
-		print sqlcommand
-		c.execute(sqlcommand)
-		db.commit()
+    for recording in values:
+    	(recordingID,sessionID,audiofile1,audiofile2,playerCh1,playerCh2,key) = recording
+    	sqlcommand = "INSERT INTO tracks ('recordingID','playerID','audiofile') VALUES (%i,%i,'%s');" % (recordingID,playerCh1,audiofile1)
+    	print sqlcommand
+    	c.execute(sqlcommand)
+    	db.commit()
 
-		sqlcommand = "INSERT INTO tracks ('recordingID','playerID','audiofile') VALUES (%i,%i,'%s');" % (recordingID,playerCh2,audiofile2)
-		print sqlcommand
-		c.execute(sqlcommand)
-		db.commit()
+    	sqlcommand = "INSERT INTO tracks ('recordingID','playerID','audiofile') VALUES (%i,%i,'%s');" % (recordingID,playerCh2,audiofile2)
+    	print sqlcommand
+    	c.execute(sqlcommand)
+    	db.commit()
 
 
 def updateSoniceventsForTrack(track,sonicevents):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     data = json.dumps(sonicevents)
 
     sqlcommand = "UPDATE tracks SET sonicevents=%s where ID=%i" % (repr(data),track[3])
@@ -146,6 +197,11 @@ def updateSoniceventsForTrack(track,sonicevents):
 
 def updateCellsForTrack(track,cells):
     #clear sequences for track
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     sqlcommand = "DELETE FROM soundcells where trackID=%i" % (track[3])
     c.execute(sqlcommand)
     db.commit()
@@ -178,7 +234,11 @@ def updateCellsForTrack(track,cells):
 
 
 def updatePhenotypesForTrack(track,sequences,phenotypes,dbField='phenotype'):
-
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     for i in range(0,len(sequences)):
         events = json.dumps(sequences[i])
         phenotype = json.dumps(phenotypes[i])
@@ -190,7 +250,11 @@ def updatePhenotypesForTrack(track,sequences,phenotypes,dbField='phenotype'):
 
 
 def updateGenotypesForTrack(track,cellBoundaries,genotypes):
-
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     for i in range(0,len(cellBoundaries)):
         events = json.dumps(cellBoundaries[i])
         genotype = json.dumps(genotypes[i].tolist())
@@ -204,7 +268,11 @@ def updateGenotypesForTrack(track,cellBoundaries,genotypes):
 
 
 def updateRelationsForTrack(track,sequences,relations):
-
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     for i in range(0,len(relations)):
     	events = json.dumps(sequences[i])
     	relation = json.dumps(relations[i])
@@ -214,9 +282,72 @@ def updateRelationsForTrack(track,sequences,relations):
 
     print "Updated relations for track %i" % (track[3])
 
+def getLineagesForRecording(recordingID):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
+
+    sqlcommand = "SELECT ID FROM lineages where recordingID=%i" % (recordingID)
+    c.execute(sqlcommand)
+    data = c.fetchall()
+
+    if data is None:
+        return None
+
+    lineages = []
+
+    for lineage in data:
+        lineages.append([lineage[0]])
+
+    return lineages
+
+def getGenotypesForSoundcell(soundcellID):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
+    sqlcommand = "SELECT genotype FROM soundcells where ID=%i" % (int(soundcellID))
+    c.execute(sqlcommand)
+    data = c.fetchone()
+
+    if data[0] is None:
+        return None
+
+    return json.loads(data[0])
+
+def getGenotypesForLineage(lineageID):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
+    sqlcommand = "SELECT genotype FROM soundcells where lineageID=%i" % (int(lineageID))
+    c.execute(sqlcommand)
+    data = c.fetchall()
+
+    if len(data)==0:
+        return None
+
+    if data[0][0] is None:
+        return None
+
+    genotypes = []
+
+    for genotype in data:
+        genotypes.append(json.loads(genotype[0]))
+
+    return genotypes
 
 def getGenotypesForTrack(track):
-    sqlcommand = "SELECT genotype,ID,start FROM soundcells where trackID=%i" % (track[3])
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
+    sqlcommand = "SELECT genotype,ID,start,lineageID,fitness FROM soundcells where trackID=%i" % (track[3])
     c.execute(sqlcommand)
     data = c.fetchall()
 
@@ -229,15 +360,24 @@ def getGenotypesForTrack(track):
     genotypes = []
     IDs = []
     start = []
+    lineages = []
+    fitnessValues = []
 
     for genotype in data:
         genotypes.append(json.loads(genotype[0]))
         IDs.append(int(genotype[1]))
         start.append(genotype[2])
+        lineages.append(genotype[3])
+        fitnessValues.append(genotype[4])
 
-    return (IDs,genotypes,start)
+    return (IDs,genotypes,start,lineages,fitnessValues)
 
 def getPhenotypesForTrack(track,dbField='phenotypeNormed'):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     sqlcommand = "SELECT %s,ID,start,end FROM soundcells where trackID=%i" % (dbField,track[3])
     c.execute(sqlcommand)
     data = c.fetchall()
@@ -263,6 +403,11 @@ def getPhenotypesForTrack(track,dbField='phenotypeNormed'):
 
 
 def getSoniceventsForTrack(track):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     sqlcommand = "SELECT sonicevents FROM tracks where ID=%i" % (track[3])
     c.execute(sqlcommand)
     data = c.fetchone()
@@ -273,6 +418,11 @@ def getSoniceventsForTrack(track):
     return json.loads(data[0])
 
 def getSoundcellsForTrack(track):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     sqlcommand = "SELECT start,end,events FROM soundcells where trackID=%i" % (track[3])
     c.execute(sqlcommand)
     data = c.fetchall()
@@ -295,6 +445,11 @@ def is_json(myjson):
     return True
 
 def getCellsForTrack(track):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     sqlcommand = "SELECT * FROM sequences where trackID=%i" % (track[3])
     c.execute(sqlcommand)
     data = c.fetchall()
@@ -317,6 +472,11 @@ def getCellsForTrack(track):
     return cells
 
 def getRecordingIDforTrack(trackID):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     sqlcommand = "SELECT recordingID FROM tracks where ID=%i" % (trackID)
     c.execute(sqlcommand)
     data = c.fetchone()
@@ -324,6 +484,11 @@ def getRecordingIDforTrack(trackID):
 
 
 def getSequenceIDsForTrack(track):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     sqlcommand = "SELECT ID,start,end FROM sequences where trackID=%i" % (track[3])
     c.execute(sqlcommand)
     data = c.fetchall()
@@ -341,6 +506,11 @@ def getSequenceIDsForTrack(track):
     return sequences
 
 def prepareDataForRelations(trackID):
+    db = MySQLdb.connect(host="localhost",
+                     user="genimpro",
+                     passwd="genimpropw#2016",
+                     db="genimpro")
+    c = db.cursor()
     recordingID = getRecordingIDforTrack(trackID)
     recordingDetails = getRecordingDetails(recordingID)
     recordingTracks = recordingDetails[4]
@@ -368,6 +538,21 @@ def getGenome():
     data = c.fetchone()
 
     return json.loads(data[0]), json.loads(data[1])
+
+def getGenepoolNetwork():
+    db = MySQLdb.connect(host="localhost",
+                 user="genimpro",
+                 passwd="genimpropw#2016",
+                 db="genimpro")
+    c = db.cursor()
+
+    sqlcommand = "SELECT nodes,links FROM genepools order by ID desc LIMIT 1"
+    c.execute(sqlcommand)
+    data = c.fetchone()
+
+    return json.loads(data[0]), json.loads(data[1])
+
+
 
 if __name__ == '__main__':
 	listRecodings()

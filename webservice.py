@@ -18,7 +18,7 @@ peakShift = 1325
 #root = tree.getroot()
 
 #db = web.database(dbn='sqlite', db='genImpro.db')
-db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
+
 
 # import MySQLdb
 # db = MySQLdb.connect(host="localhost",
@@ -40,11 +40,14 @@ urls = ("/recordings", "list_recordings",
     '/sessions', 'list_sessions',
     '/sessions/(.*)', 'get_session',
     '/genetics/(.*)', 'get_genetics',
+    '/genepoolNetworks', 'get_genepoolNetworks',
     '/genome', 'get_genome'
     )
 
 
 def getRecording(row):
+
+    db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
     tracks = []
     recording = {}
 
@@ -57,15 +60,14 @@ def getRecording(row):
 
     for trackRow in trackResults:
         #name,instrument
-        playerResults = db.select('players',what="name,instrument", where="ID=%i" % (trackRow["playerID"]))
+        playerResults = db.select('players',what="name,instrument,playerKey", where="ID=%i" % (trackRow["playerID"]))
         playerResults = list(playerResults)
         track = {}
         track["ID"] = trackRow["ID"]
         track["audiofile"] = trackRow["audiofile"]
-
         track["playerName"] = playerResults[0]["name"]
         track["playerInstrument"] = playerResults[0]["instrument"]
-
+        track["playerKey"] = playerResults[0]["playerKey"]
         tracks.append(track)
 
     recording["tracks"] = tracks
@@ -159,8 +161,13 @@ class get_genome:
     def GET(self):
         return json.dumps(genimpro.recordings.getGenome())
 
+class get_genepoolNetworks:
+    def GET(self):
+        return json.dumps(genimpro.recordings.getGenepoolNetwork())
+
 class list_recordings:
     def GET(self):
+        db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
         recordings = []
         results = db.select('recordings',what="ID,recordingKey,recordingDate,sessionID")
 
@@ -171,6 +178,7 @@ class list_recordings:
 
 class list_tracks:
     def GET(self):
+        db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
         recordings = []
         results = db.select('recordings')
 
@@ -181,7 +189,6 @@ class list_tracks:
 
 class get_genetics:
     def GET(self,ID):
-
         return json.dumps(genimpro.geneticsForVisualisation(int(ID)))
 
 class get_session:
@@ -196,6 +203,7 @@ class get_session:
 
 class get_recording:
     def GET(self,ID):
+        db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
         recordings = []
         results = db.select('recordings',where="id=%i" % (int(ID)))
 
@@ -205,6 +213,7 @@ class get_recording:
         return json.dumps(recordings)
 
 def tracksIDsForRecording(recordingID):
+    db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
     results = db.select('tracks',where="recordingID=%i" % (int(recordingID)))
     tracks = []
     for row in results:
@@ -214,6 +223,7 @@ def tracksIDsForRecording(recordingID):
 
 class soundcells:
     def GET(self,ID):
+        db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
         soundcells = []
         print tracksIDsForRecording(ID)
         for trackID in tracksIDsForRecording(ID):
@@ -228,6 +238,7 @@ class soundcells:
 
 class editedSegments:
     def POST(self,ID):
+        db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
         data = json.loads(web.data())
 
         segments1 = np.asarray(data[0]) * samplerate - peakShift
@@ -239,6 +250,7 @@ class editedSegments:
 
 class segments:
     def GET(self,ID):
+        db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
         segments1 = []
         segments2 = []
 
@@ -262,6 +274,7 @@ class segments:
 
 class soundcellAudio:
     def GET(self,ID):
+        db = web.database(dbn='mysql', user='genimpro', pw='genimpropw#2016', db='genimpro')
         sequenceQuery = db.select('soundcells',where="ID=%i" % (int(ID)))
         row = sequenceQuery[0]
         trackID = row["trackID"]
@@ -272,27 +285,6 @@ class soundcellAudio:
         filename = filenameQuery[0]["audiofile"]
 
         return mp3slice(filename,start,end)
-
-
-class testAudio:
-    def GET(self,ID):
-        sequenceQuery = db.select('sequences',where="ID=%i" % (int(ID)))
-        row = sequenceQuery[0]
-        trackID = row["trackID"]
-        start =row["start"]
-        end =row["end"]
-        filenameQuery = db.select('tracks',where="ID=%i" % (trackID))
-
-        filename = filenameQuery[0]["audiofile"]
-
-        return """
-    <body>
-    <audio controls="controls" style="width:600px" >
-      {audio}
-    </audio>
-    </body>
-    """.format(audio=mp3slice(filename,start,end))
-
 
 
 app = web.application(urls, globals())

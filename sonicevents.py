@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-
 import sys
 from aubio import *
 from essentia.standard import *
@@ -28,14 +27,14 @@ def getOnsetsForFile(filename,printDetails=0,t_silence=-95,min_ms=20):
     o = onset(onset_mode,win_s, hop_s)
     o.set_silence(t_silence)
     o.set_minioi_ms(min_ms)
-    
+
     multiplier = 512/hop_s
     samplerate=s.samplerate
 
 
     onsets = []
     total_frames = 0
-    
+
     while True:
         samples, read = s()
         #samples = samples * 10.0 #increase loudness for onset detection
@@ -52,20 +51,20 @@ def getOnsetsForFile(filename,printDetails=0,t_silence=-95,min_ms=20):
 
 def getOnsetsForAudio(audio,printDetails=0):
     from essentia import Pool, array
-    
+
     od1 = OnsetDetection(method = 'hfc')
-    od2 = OnsetDetection(method = 'complex') 
+    od2 = OnsetDetection(method = 'complex')
     od3 = OnsetDetection(method = 'flux')
-    
-    
+
+
     onsetsSamples = []
 
     w = Windowing(type = 'hann')
-    fft = FFT() 
-    c2p = CartesianToPolar() 
-    
+    fft = FFT()
+    c2p = CartesianToPolar()
+
     pool = Pool()
-    
+
 
     for frame in FrameGenerator(audio, frameSize = 1024, hopSize = 512):
         mag, phase, = c2p(fft(w(frame)))
@@ -76,17 +75,17 @@ def getOnsetsForAudio(audio,printDetails=0):
     onsets = Onsets()
 
     onsets_times = onsets(array([ pool['features.hfc'] ,  pool['features.complex'],  pool['features.flux'] ]), [ 5,1,1 ])
-        
+
     marker = AudioOnsetsMarker(onsets = onsets_times, type = 'beep')
     marked_audio = marker(audio)
-    
+
     if printDetails:
         print "    " + str(len(onsets_times)) + " onsets found"
 
     for onset in onsets_times:
         onsetsSamples.append(int(onset * 44100))
-        
-    
+
+
     return onsetsSamples
 
 
@@ -99,11 +98,11 @@ def getOnsetsForTrack(track):
     onsets = getOnsetsForAudio(audio,printDetails=1)
 
     return (onsets)
-	
+
 def showAndPlay(events,audio,sequence=[]):
 	from utility import float2pcm
 	import pyaudio
-	
+
 	p = pyaudio.PyAudio()
 
 	stream = p.open(format=2,channels=1,rate=int(samplerate),output=True)
@@ -116,23 +115,23 @@ def showAndPlay(events,audio,sequence=[]):
 		print "mark %i from %i to %i" % (sequence[i],events[i]["start"],events[i]["end"])
 		plt.text(events[i]["start"], .05, str(sequence[i]))
 		plt.axvspan(events[i]["start"]-startsample, events[i]["end"]-startsample, color='red', alpha=(((i+1)%2)*0.5))
-	
+
 	pcmaudio = float2pcm(samples)
 	data = struct.pack(str(len(pcmaudio)) + 'h',*pcmaudio)
 	stream.write(data)
-	
-	plt.show() #block=False		
+
+	plt.show() #block=False
 
 	stream.stop_stream()
 	stream.close()
-	
+
 	p.terminate()
-	
+
 
 def soniceventsForOnsets(onsets,audio,t_loudness=0.5,printDetails=0):
     mono_audio = audio  * 10.0 #normalize
     loudness = essentia.standard.Loudness()
-    
+
     sonicevents = []
     #onsetStart = onsets[0]
 
@@ -141,9 +140,9 @@ def soniceventsForOnsets(onsets,audio,t_loudness=0.5,printDetails=0):
             onsetEnd = onsets[i+1]
         else:
             onsetEnd = len(mono_audio)
-            
+
         frame = mono_audio[onsets[i]:onsetEnd]
-        
+
         if (loudness(frame) > t_loudness):
             sonicevents.append({"start":onsets[i],"end":onsetEnd,"loudness":loudness(frame)})
             #onsetStart = onsets[i+1]
@@ -155,10 +154,10 @@ def soniceventsForOnsets(onsets,audio,t_loudness=0.5,printDetails=0):
         if sonicevents[i]["end"] is not sonicevents[i+1]["start"]:
             #glue together
             sonicevents[i]["end"]=sonicevents[i+1]["start"]
-        
+
     return sonicevents
 
-	
+
 def featuresForSonicevents(sonicevents,audio):
 
     effectiveDuration = essentia.standard.EffectiveDuration(sampleRate=samplerate,thresholdRatio=0.01)
@@ -206,7 +205,7 @@ def featuresForSonicevents(sonicevents,audio):
             features["SpectralFlux"]["raw"].append(SpectralFlux(spectrum))
             peaks = SpectralPeaks(spectrum)
             features["Roughness"]["raw"].append(Dissonance(peaks[0],peaks[1]))
-            
+
             (pitch,pitchConfidence) = Pitch(spectrum)
             if (pitchConfidence>0.5):
                 features["Pitch"]["raw"].append(pitch)
@@ -235,5 +234,3 @@ def featuresForSonicevents(sonicevents,audio):
         event["features"]=features
 
     return sonicevents
-
-
