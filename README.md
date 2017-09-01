@@ -1,8 +1,9 @@
 # GenImpro
+musical analysis toolset for evolutionary development in improvised music
 
-##Dependencies
+## Dependencies
 
-#####Python Libraries
+##### Python Libraries
 
 
 - [Numpy](http://www.numpy.org/)
