@@ -83,8 +83,12 @@ def mp3forRecoding(recordingID,samplerate=44100.0):
     for i,track in enumerate(recording[4]):
         filename = track[2]
 
-        #mp3filename = os.path.splitext(filename)[0] + ".mp3"
-        aiffAudio = pydub.AudioSegment.from_file(filename,"aiff")
+        if os.path.isfile(filename):
+            aiffAudio = pydub.AudioSegment.from_file(filename,"aiff")
+        else:
+            mp3filename = os.path.splitext(filename)[0] + ".mp3"
+            aiffAudio = pydub.AudioSegment.from_file(mp3filename,"mp3")
+        
         aiffAudio = aiffAudio + 10
         tracksAudio.append(aiffAudio)
         #aiffAudio.export(mp3filename, format="mp3")
