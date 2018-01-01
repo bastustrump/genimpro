@@ -4,15 +4,15 @@
 *.sv
 
 *~
-.DS*
+._DS*
 test.py
 *.png
 *.aiff
+*.mp3
+*.wav
 
 *.pyc
 
 *.pyc
 
 *.db
-
-.DS_Store

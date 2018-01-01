@@ -119,6 +119,8 @@ $("#recordingSelector").on("click", "li", function(event) {
 		$("#recordingButton").html($(this).find('a').text() + ' <span class="caret"></span>');
     loadRecording(recordingID);
 
+    $("#LoadingIndicator").css("visibility", "visible");
+
     if (audio.hasAttribute("controls")) {
         audio.removeAttribute("controls");
     }
@@ -134,6 +136,7 @@ $("#recordingSelector").on("click", "li", function(event) {
         $("#audioElement").html(element);
         $("#audioElement").load();
         audio.setAttribute("controls", "controls");
+        $("#LoadingIndicator").css("visibility", "collapse");
     });
 
 })

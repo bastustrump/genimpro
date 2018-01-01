@@ -6,6 +6,9 @@
 <script src="d3.v4.min.js"></script>
 <!-- Latest compiled and minified CSS -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+
 <!-- Optional theme -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
 <!-- Latest compiled and minified JavaScript -->
@@ -185,6 +188,11 @@
     .table {
         margin-bottom: 10px;
     }
+
+    #LoadingIndicator {
+      margin-top: 10px;
+      visibility: collapse;
+    }
 </style>
 
 <body>
@@ -204,7 +212,13 @@
                         <ul class="dropdown-menu multi-column columns-2" role="menu" id="recordingSelector"></ul>
                     </li>
                 </ul>
+                <div id="LoadingIndicator" class="nav navbar-nav">
+                  <i class="fa fa-spinner fa-pulse fa-2x fa-fw"></i>
+                  <span class="sr-only">Loading...</span>
+                </div>
+                
                 <p class="navbar-text" id="navbarTitle">
+
                     <audio id="audioElement" style="width:600px"></audio>
                 </p>
             </div>
